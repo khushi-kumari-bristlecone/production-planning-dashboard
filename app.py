@@ -793,23 +793,23 @@ def ConstrainedPlan(req_prod,capacity,production,inventory,sales,dos,pullin_desi
 # doh_floor_ceil_df1
 
 ## INPUT FILES:
-req_prod = pd.read_csv('./raw_Data/req_prod.csv')
+req_prod = pd.read_csv('./req_prod.csv')
 print(req_prod.shape)
 req_prod.head(2)
-capacity = pd.read_csv('./raw_Data/capacity.csv')
+capacity = pd.read_csv('./capacity.csv')
 capacity.columns = [col.replace('.1', '') for col in capacity.columns]
 print(capacity.shape)
 capacity.head(2)
-production = pd.read_csv('./raw_Data/production.csv')
+production = pd.read_csv('./production.csv')
 print(production.shape)
 production.head(2)
-inventory = pd.read_csv('./raw_Data/inventory.csv')
+inventory = pd.read_csv('./inventory.csv')
 print(inventory.shape)
 inventory.head(2)
-sales = pd.read_csv('./raw_Data/sales.csv')
+sales = pd.read_csv('./sales.csv')
 print(sales.shape)
 sales.head(2)
-dos = pd.read_csv('./raw_Data/dos.csv')
+dos = pd.read_csv('./dos.csv')
 print(dos.shape)
 dos.head(2)
 pullin_desired_order = ['PURE', 'DREAM', 'TOURING', 'GT', 'GT-P', 'SAPPHIRE'] 
@@ -1024,3 +1024,4 @@ if run_balance_result is not None:
     st.subheader("📈 Updated DOS")
 
     st.data_editor(dos_out, key="edit_dos_out", num_rows="dynamic")
+
