@@ -20,10 +20,13 @@ def ConstrainedPlan(req_prod,capacity,production,inventory,sales,dos,pullin_desi
     production = production.drop(production.columns[3:5], axis=1)
     
     
-    last_month_invt = inventory.iloc[:, [0, 1, 2, 4]]
-    inventory = inventory.drop(inventory.columns[3:5], axis=1)
+    # last_month_invt = inventory.iloc[:, [0, 1, 2, 4]]
+    # inventory = inventory.drop(inventory.columns[3:5], axis=1)
     sales = sales.drop(sales.columns[3:5], axis=1)
     dos = dos.drop(dos.columns[3:5], axis=1)
+
+    last_month_invt = inventory.iloc[:, [0, 1, 2, 3]]
+    inventory = inventory.drop(inventory.columns[3:5], axis=1)
     
     # print('DOS :', dos.columns)
     total_production = req_prod.sum(axis = 0, numeric_only = True)
@@ -653,3 +656,4 @@ if run_balance_result is not None:
 
     st.subheader("📈 Updated DOS")
     st.data_editor(dos_out, key="edit_dos_out", num_rows="dynamic")
+
