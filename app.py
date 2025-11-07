@@ -114,54 +114,38 @@ def ConstrainedPlan(req_prod,capacity,production,inventory,sales,dos,pullin_desi
                 prev_month_invt = inventory.loc[(inventory['PRODUCT_TRIM'] == car_model) & (inventory['MODEL_YEAR'] == model_year), prev_month]
             i+=1
             inventory.loc[(inventory['PRODUCT_TRIM'] == car_model) & (inventory['MODEL_YEAR'] == model_year), month] =  prev_month_invt + production.loc[(production['PRODUCT_TRIM'] == car_model) & (production['MODEL_YEAR'] == model_year), month] - sales.loc[(sales['PRODUCT_TRIM'] == car_model) & (sales['MODEL_YEAR'] == model_year), month]
-   
+    
     def update_value_pull(pull_value, car_model, add_month, sub_month, model_year):
         # Define a helper function for updates to avoid redundancy
         def update_data(df, model_col, year_col):
-            # Defensive checks
+            # Check if the car model and MODEL_YEAR exist in the DataFrame
             if car_model in df[model_col].values:
+                if add_month in df.columns:
+                    pass  # Placeholder for logic
                 if sub_month in df.columns:
-                    selection = df.loc[
-                        (df[model_col] == car_model) & (df[year_col] == model_year),
-                        sub_month
-                    ]
-                    if not selection.empty:
-                        value = selection.values[0]
-                        print("update production: ", selection)
-                        if value < 0:
-                            print("--------------------------negative production found for pull/push------------------------------")
-                    else:
-                        print(f"Warning: No {car_model}, {model_year}, {sub_month} found in DataFrame!")
-                        # Optionally handle missing value case here (e.g., skip or use a default)
-                else:
-                    print(f"Warning: Column {sub_month} does not exist in DataFrame!")
-            else:
-                print(f"Warning: Car model {car_model} not found in DataFrame!")
-
+                    pass  # Placeholder for logic
+                # Assuming car_model, model_year, model_col, year_col, and month_plus1 are defined
+                value = df.loc[(df[model_col] == car_model) & (df[year_col] == model_year), sub_month].values[0]
+                print("update production: ", df.loc[(df[model_col] == car_model) & (df[year_col] == model_year), sub_month])
+                if value<0:
+                    print("--------------------------negative production found for pull------------------------------")
+        # Update production and inventory data with the added MODEL_YEAR condition
         update_data(production, "PRODUCT_TRIM", "MODEL_YEAR")
     def update_value_push(push_value, car_model, add_month, sub_month, model_year):
     # Define a helper function for updates to avoid redundancy
         def update_data(df, model_col, year_col):
-            # Defensive checks
+            # Check if the car model and MODEL_YEAR exist in the DataFrame
             if car_model in df[model_col].values:
+                if add_month in df.columns:
+                    pass  # Placeholder for logic
                 if sub_month in df.columns:
-                    selection = df.loc[
-                        (df[model_col] == car_model) & (df[year_col] == model_year),
-                        sub_month
-                    ]
-                    if not selection.empty:
-                        value = selection.values[0]
-                        print("update production: ", selection)
-                        if value < 0:
-                            print("--------------------------negative production found for pull/push------------------------------")
-                    else:
-                        print(f"Warning: No {car_model}, {model_year}, {sub_month} found in DataFrame!")
-                        # Optionally handle missing value case here (e.g., skip or use a default)
-                else:
-                    print(f"Warning: Column {sub_month} does not exist in DataFrame!")
-            else:
-                print(f"Warning: Car model {car_model} not found in DataFrame!")
-
+                    pass  # Placeholder for logic
+                # Assuming car_model, model_year, model_col, year_col, and month_plus1 are defined
+                value = df.loc[(df[model_col] == car_model) & (df[year_col] == model_year), sub_month].values[0]
+                print("update production: ", df.loc[(df[model_col] == car_model) & (df[year_col] == model_year), sub_month])
+                if value<0:
+                    print("--------------------------negative production found for push------------------------------")
+        # Update production and inventory data with the added MODEL_YEAR condition
         update_data(production, "PRODUCT_TRIM", "MODEL_YEAR")
     def generate_month_list(year):
         months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
@@ -205,7 +189,7 @@ def ConstrainedPlan(req_prod,capacity,production,inventory,sales,dos,pullin_desi
         yr_month_list = generate_month_list(year_num)
         actual_data_present = find_common_elements_ordered(yr_month_list, all_keys)
         actual_data_present_v0 = actual_data_present
-                    
+                        
         # Check if the iteration is for last year
             # If yes apply following conditions for last year
                 # 1. Target and current month cannot touch last 2 months of that year : +2 months sales value reliance
@@ -264,6 +248,12 @@ def ConstrainedPlan(req_prod,capacity,production,inventory,sales,dos,pullin_desi
         ########################################2nd Iteration  Deficit/Conflict iteration ###################################
         # print('\n\n########################################2nd Iteration  Deficit/Conflict iteration ###################################')
         for i, month in enumerate(keys):
+            # FIX: Check if next index exists before attempting to access keys[i + 1]
+            if i + 1 >= len(keys):
+                # print(f"Reached the last month of the current sweep: {keys[i]} - cannot check next month.")
+                break
+            # END FIX
+            
             try:
                 deficit = data[month]
                 # defining a variable to differentiate between current and target month
@@ -272,7 +262,7 @@ def ConstrainedPlan(req_prod,capacity,production,inventory,sales,dos,pullin_desi
                 if keys[i] == list(all_data.keys())[-1]:
                     # print(f"Reached end of Given production data - {keys[i]}....closing operation")
                     break
-            
+                
                 # if last month of given of preoduction data is reached stop
                 if curr_month == list(all_data.keys())[-1]:
                     # print(f"Reached end of Given production data - {curr_month}....closing operation")
@@ -288,11 +278,10 @@ def ConstrainedPlan(req_prod,capacity,production,inventory,sales,dos,pullin_desi
                         if ('Dec' in keys[i]) :
                             print("***--------Target month reached next year Jan-------saving last changes and closing operation***")
                             break
-                        # Iterate through car models in the defined order (GT -> Touring -> Pure)
-                        try:
-                            print("--- Current target month {} ---".format(keys[i + 1]))
-                        except:
-                            break
+                        # Accessing keys[i + 1] is now safe because of the check before the loop.
+                        next_month = keys[i + 1] 
+                        print("--- Current target month {} ---".format(next_month))
+                        
                         for car_model in pushout_desired_order:
                             # Get all rows for the current car model and sort by 'MODEL_YEAR'
                             model_rows = production[production["PRODUCT_TRIM"] == car_model].sort_values(by="MODEL_YEAR")
@@ -327,19 +316,7 @@ def ConstrainedPlan(req_prod,capacity,production,inventory,sales,dos,pullin_desi
         # print('\n\n################################################# Now 3rd iteration ############################################\n')
         
         
-        ###### Simplified Logic
-        ## If curr year in not a final year
-        ### we create a apended list of current year months and all next year months 
-        ##### check if the next year is final
-        ######### if yes perfrom normal surplus iteration with appended list -2 month
-        ######### if no check if Next to next year exists with atleast 2 months
-        ############ if yes take complete appended list with curr and next with no subtarction
-        ############ if 1 month then subtract one month from appended if no month subtract 2 
-        ############### now we perform surplus on this list
-        ## If curr year is final year 
-        ### we perfrom normal surplus on the data with -2 month logic
-        
-        
+        # ... (Simplified Logic Block for creating new_traversal_data and keys remains the same) ...
         
         
         #### if Current year is final year
@@ -348,7 +325,7 @@ def ConstrainedPlan(req_prod,capacity,production,inventory,sales,dos,pullin_desi
             new_traversal_data = actual_data_present_v0
             
             # dont iterate over the last 2 months of the data
-            new_traversal_data = new_traversal_data[:-2]            
+            new_traversal_data = new_traversal_data[:-2]         
             data = {key: all_data[key] for key in new_traversal_data if key in all_data}
             keys = list(data.keys()) 
             # print(data)
@@ -376,13 +353,13 @@ def ConstrainedPlan(req_prod,capacity,production,inventory,sales,dos,pullin_desi
                 len_actual_data_present_ny_2 = len(actual_data_present_ny_2)
                 if len_actual_data_present_ny_2 >1:
                     new_traversal_data = actual_data_present_v0 + actual_data_present_ny
-                    # print('\n Next year is not Final year in the data with > 1 months data . Thus, Executing 3rd iteration with considering current and next month without reduction on month')                    
+                    # print('\n Next year is not Final year in the data with > 1 months data . Thus, Executing 3rd iteration with considering current and next month without reduction on month')             
                 else:
                     new_traversal_data = actual_data_present_v0 + actual_data_present_ny
                     remove_month_num = 2 - len_actual_data_present_ny_2
                     new_traversal_data = actual_data_present_v0 + actual_data_present_ny[:-remove_month_num]
-                    # print('\n Next year is not Final year in the data with < 2 months data . Thus, Executing 3rd iteration with considering current and next month with calculated reduction on month')                    
-                            
+                    # print('\n Next year is not Final year in the data with < 2 months data . Thus, Executing 3rd iteration with considering current and next month with calculated reduction on month')             
+                        
             
         # #Get next year first month for current month iteration restriction 
         if is_final_year == 0:
@@ -392,10 +369,10 @@ def ConstrainedPlan(req_prod,capacity,production,inventory,sales,dos,pullin_desi
             actual_data_present_ny = find_common_elements_ordered(yr_month_list_ny, all_keys)
             # if not actual_data_present_ny:
             #     print('No next year data present')
-            #     break                    
+            #     break           
             ny_year_month = actual_data_present_ny[0]
             traversal_last_month = new_traversal_data[-1]
-        # give acces to plus 2 months from end but iteration alwasy end at dec     
+        # give acces to plus 2 months from end but iteration alwasy end at dec    
         special_inv_month_key_ny = new_traversal_data + next_two_months(new_traversal_data)
         data = {key: all_data[key] for key in new_traversal_data if key in all_data}
         keys = list(data.keys()) 
@@ -405,6 +382,12 @@ def ConstrainedPlan(req_prod,capacity,production,inventory,sales,dos,pullin_desi
         
         #print(f"\n------------------------------------special_inv_month_key_ny -{special_inv_month_key_ny} -------------------------")
         for i, month in enumerate(keys):
+            # FIX: Check if next index exists before attempting to access keys[i + 1]
+            if i + 1 >= len(keys):
+                # print(f"Reached the last month of the final sweep: {keys[i]} - cannot check next month.")
+                break
+            # END FIX
+            
             surplus = data[month]
             # defining a variable to differentiate between current and target month
             curr_month_num = i
@@ -416,7 +399,7 @@ def ConstrainedPlan(req_prod,capacity,production,inventory,sales,dos,pullin_desi
             if is_final_year == 0:
                 if (ny_year_month in keys[curr_month_num]) :
                     # print('**No pull in after last month in 3rd iteration***')
-                    break                           
+                    break                   
             if surplus>0:
                 # print("\n\n--- Month {}, surplus {} ---".format(keys[curr_month_num],surplus))
                 
@@ -429,19 +412,27 @@ def ConstrainedPlan(req_prod,capacity,production,inventory,sales,dos,pullin_desi
                     # Condition to stop on next year Jan as Target
                     # print("~~~~~~~~~~~~ Current values in adjust build slot ~~~~~~~~~~~~~~~~~~~~~\n",all_data)
                     # if ('Dec' in keys[i]):
-                    #     print("***--------Target month reached next year Jan-------saving last changes and closing operation***")
-                    #     break
+                    #    print("***--------Target month reached next year Jan-------saving last changes and closing operation***")
+                    #    break
                     # Iterate through car models in the defined order (GT -> Touring -> Pure)
+                    
+                    # Target month is keys[i + 1], which is safe due to the check at the start of the loop
+                    next_month = keys[i + 1] # Now it's safe to access
+                    
                     try:
                         pass  # Placeholder for logic
                     except:
                         pass  # Placeholder for logic
+                    
+                    # Get model rows after confirming next_month is safe to access
+                    model_rows = production[production["PRODUCT_TRIM"] == car_model].sort_values(by="MODEL_YEAR")
+                    
                     for car_model in pullin_desired_order:
                         floor_doh = doh_floor_ceil_df1[doh_floor_ceil_df1["dd_Trim"] == car_model]["amt_Floor_DOS"].values[0]
                         ceil_doh = doh_floor_ceil_df1[doh_floor_ceil_df1["dd_Trim"] == car_model]["amt_Ceiling_DOS"].values[0]
                         # Iterate through the sorted rows from oldest to newest MODEL_YEAR
                         for idx, row in model_rows.iterrows():
-                            next_month = keys[i + 1]
+                            # The variable 'next_month' is defined above the 'while' loop block's logic
                             next_month_production = row[next_month]
                             sub_val = min(next_month_production, surplus)
                             #product_id = row["Product ID"]
@@ -456,22 +447,22 @@ def ConstrainedPlan(req_prod,capacity,production,inventory,sales,dos,pullin_desi
                                     
                                 adjustable_invt_floor = current_invt - calculate_amt_of_invt(floor_doh, sales_forecast_floor_doh, days_per_month_floor)
                                 
-#                                 current_invt_ceil = inventory.loc[inventory.index[idx], special_inv_month_key[curr_month_num]]
-#                                 sales_forecast_ceil_doh = sales.loc[sales.index[idx], special_inv_month_key[curr_month_num + 1:]].values[:]
-#                                 sales_forecast_ceil_doh = sales_forecast_ceil_doh.astype(int).tolist()
-#                                 days_per_month_ceil = []
-#                                 for dayinmon in special_inv_month_key[curr_month_num + 1:]:
-#                                     days_per_month_ceil.append(days_in_month(dayinmon))
+#                                current_invt_ceil = inventory.loc[inventory.index[idx], special_inv_month_key[curr_month_num]]
+#                                sales_forecast_ceil_doh = sales.loc[sales.index[idx], special_inv_month_key[curr_month_num + 1:]].values[:]
+#                                sales_forecast_ceil_doh = sales_forecast_ceil_doh.astype(int).tolist()
+#                                days_per_month_ceil = []
+#                                for dayinmon in special_inv_month_key[curr_month_num + 1:]:
+#                                    days_per_month_ceil.append(days_in_month(dayinmon))
                                     
-#                                 adjustable_invt_ceil = calculate_amt_of_invt(ceil_doh, sales_forecast_ceil_doh, days_per_month_ceil) - current_invt_ceil
-#                                 if adjustable_invt_ceil<0:
-#                                     invt_acceptable = 0
-#                                 else:
-#                                     invt_acceptable = min(adjustable_invt_floor,adjustable_invt_ceil)
+#                                adjustable_invt_ceil = calculate_amt_of_invt(ceil_doh, sales_forecast_ceil_doh, days_per_month_ceil) - current_invt_ceil
+#                                if adjustable_invt_ceil<0:
+#                                    invt_acceptable = 0
+#                                else:
+#                                    invt_acceptable = min(adjustable_invt_floor,adjustable_invt_ceil)
                             
                             except Exception as e:
-                                    # print('exception as :', e)
-                                    pass
+                                     # print('exception as :', e)
+                                     pass
                             # Determine the pull value and update
                             pull_value = min(sub_val, adjustable_invt_floor)
                             # print(f"Pull value: {pull_value} for car: {car_model}, MODEL_YEAR: {row['MODEL_YEAR']}, month: {month}")
@@ -498,7 +489,7 @@ def ConstrainedPlan(req_prod,capacity,production,inventory,sales,dos,pullin_desi
                                 sales_values = sales.loc[sales.index[idx], special_inv_month_key_ny[curr_month_num+1:]].values[:]
                             except:
                                 #print('Breaking at Sales Values in except in iteration 3')
-                                pass                                        
+                                pass                                         
                             sales_values = sales_values.astype(int).tolist()
                             days_per_month = []
                             for dayinmon in special_inv_month_key_ny[curr_month_num+1:]:
@@ -516,271 +507,6 @@ def ConstrainedPlan(req_prod,capacity,production,inventory,sales,dos,pullin_desi
                             # Calculate total days of supply
                             total_days_of_supply_ith = calculate_days_of_supply(end_of_month_inventory_ith, sales_values_ith,days_per_month_target)
                             dos.loc[(dos['PRODUCT_TRIM']==car_model) & (dos["MODEL_YEAR"] == model_year),keys[i+1]] = float(total_days_of_supply_ith)
-                            #print('ALL total_days_of_supply_ith',total_days_of_supply_ith,'ALL days_per_month: ',days_per_month )
-                        # print("Total days of supply for pulled in :", round(total_days_of_supply_ith, 2))
-                            if total_days_of_supply_ith<floor_doh or total_days_of_supply_ith>ceil_doh or total_days_of_supply<floor_doh or total_days_of_supply>ceil_doh:
-                                pass  # Placeholder for logic
-                            
+                            #print(
 
-                            #print(f"New surplus: {surplus}, Index: {idx}")
-                            # If surplus is fully adjusted, break out of the loop
-                            if surplus <= 0:
-                                break
-                        # Check if surplus is resolved after iterating through all MODEL_YEARs for the car model
-                        if surplus <= 0:
-                            break
-                    # If reached the last index and still have surplus, move to the next month
-                    if surplus > 0:
-                        # print("Moving to next month")
-                        i += 1
-                        if keys[i] == list(all_data.keys())[-1]:
-                            break
-                else:
-                    pass
-            # print(f"\n-----------------------------Operation done for {curr_month}---------------------------------------------------------------\n\n")
-    # inventory.to_csv("final_inventory.csv", index=False)
-    # production.to_csv("final_production.csv",index  = False)
-    # production.to_csv('final_production.csv', index = False)
-    # req_prod.to_csv('final_req_production.csv', index = False)
-    # capacity.to_csv('final_capacity.csv', index = False)
-    # total_production.to_csv('final_total_production.csv', index = False)
-    # sales.to_csv('final_sales.csv', index = False)
-    # dos.to_csv('final_dos.csv', index = False)
     return production, inventory, dos
-
-
-## DATA IMPORT:
-# doh_floor_ceil_df1
-
-## INPUT FILES:
-req_prod = pd.read_csv('./req_prod.csv')
-print(req_prod.shape)
-req_prod.head(2)
-capacity = pd.read_csv('./capacity.csv')
-capacity.columns = [col.replace('.1', '') for col in capacity.columns]
-print(capacity.shape)
-capacity.head(2)
-production = pd.read_csv('./production.csv')
-print(production.shape)
-production.head(2)
-inventory = pd.read_csv('./inventory.csv')
-print(inventory.shape)
-inventory.head(2)
-sales = pd.read_csv('./sales.csv')
-print(sales.shape)
-sales.head(2)
-dos = pd.read_csv('./dos.csv')
-print(dos.shape)
-dos.head(2)
-pullin_desired_order = ['PURE', 'DREAM', 'TOURING', 'GT', 'GT-P', 'SAPPHIRE'] 
-pushout_desired_order = ['SAPPHIRE', 'GT-P', 'GT', 'TOURING', 'DREAM', 'PURE']
-inventory.iloc[:, [0, 1, 2, 4]]
-capacity = capacity.iloc[:, 9:36]
-dd_Trim = ['SAPPHIRE', 'GT-P', 'GT', 'TOURING', 'DREAM', 'PURE']
-amt_Floor_DOS = 60
-amt_Ceiling_DOS = 100
-doh_floor_ceil_df1 = pd.DataFrame({'dd_Trim': dd_Trim,
-                                   'amt_Floor_DOS': [amt_Floor_DOS] * len(dd_Trim),
-                                   'amt_Ceiling_DOS': [amt_Ceiling_DOS] * len(dd_Trim)})
-print(doh_floor_ceil_df1.shape)
-
-## Function Call:
-#Balance - Button Clicked
-
-production, inventory, dos = ConstrainedPlan(req_prod,capacity,production,inventory,sales,dos,pullin_desired_order, pushout_desired_order,doh_floor_ceil_df1)
-
-production
-
-inventory
-
-dos
-
-
-
-import requests
-model = "llama3"
-prompt = "Explain the concept of streaming pipelines in AWS Lambda."
-response = requests.post(
-    "http://localhost:11434/api/generate",
-    json={
-        "model": model,
-        "prompt": prompt
-    }
-)
-# Print the full JSON response to inspect
-print(response.json())
-
-
-import requests
-def call_ollama_model(model_name: str, prompt: str):
-    """
-    Sends a prompt to a locally running Ollama model and returns the response.
-    """
-    url = "http://localhost:11434/api/generate"
-    payload = {
-        "model": model_name,
-        "prompt": prompt
-    }
-    try:
-        response = requests.post(url, json=payload)
-        response.raise_for_status()  # Raise error for bad HTTP status
-        data = response.json()
-        if "response" in data:
-            return data["response"]
-        elif "error" in data:
-            return f"Error from Ollama: {data['error']}"
-        else:
-            return "Unexpected response format."
-    except requests.exceptions.ConnectionError:
-        return "Could not connect to Ollama. Is it running on localhost:11434?"
-    except requests.exceptions.HTTPError as http_err:
-        return f"HTTP error occurred: {http_err}"
-    except Exception as e:
-        return f"An error occurred: {e}"
-# Example usage
-if __name__ == "__main__":
-    model = "llama3"  # Make sure this model is pulled via `ollama pull llama3`
-    prompt = "Explain the concept of streaming pipelines in AWS Lambda."
-    result = call_ollama_model(model, prompt)
-    print(result)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-##UI CODE##########################################################################################################################
-import streamlit as st
-import pandas as pd
-from pathlib import Path
-import numpy as np
-import calendar
-import math
-
-# -----------------------------
-# Load Input Data
-# -----------------------------
-BASE_DIR = Path(__file__).parent
-
-req_prod = pd.read_csv(BASE_DIR / 'req_prod.csv')
-capacity = pd.read_csv(BASE_DIR / 'capacity.csv')
-capacity.columns = [col.replace('.1', '') for col in capacity.columns]
-production = pd.read_csv(BASE_DIR / 'production.csv')
-inventory = pd.read_csv(BASE_DIR / 'inventory.csv')
-sales = pd.read_csv(BASE_DIR / 'sales.csv')
-dos = pd.read_csv(BASE_DIR / 'dos.csv')
-
-pullin_desired_order = ['PURE', 'DREAM', 'TOURING', 'GT', 'GT-P', 'SAPPHIRE']
-pushout_desired_order = ['SAPPHIRE', 'GT-P', 'GT', 'TOURING', 'DREAM', 'PURE']
-
-inventory = inventory.iloc[:, [0, 1, 2, 4]]
-capacity = capacity.iloc[:, 9:36]
-
-dd_Trim = ['SAPPHIRE', 'GT-P', 'GT', 'TOURING', 'DREAM', 'PURE']
-amt_Floor_DOS = 60
-amt_Ceiling_DOS = 100
-doh_floor_ceil_df1 = pd.DataFrame({
-    'dd_Trim': dd_Trim,
-    'amt_Floor_DOS': [amt_Floor_DOS] * len(dd_Trim),
-    'amt_Ceiling_DOS': [amt_Ceiling_DOS] * len(dd_Trim)
-})
-
-# -----------------------------
-# Streamlit UI
-# -----------------------------
-st.set_page_config(page_title="Production Planning Dashboard", layout="wide")
-st.title("📊 Production Planning Dashboard")
-
-# Move Run Balance Plan button to the top
-run_balance_clicked = st.button("⚖️ Run Balance Plan", key="run_balance_top")
-run_balance_result = None
-if run_balance_clicked:
-    with st.spinner("Running Constrained Plan..."):
-        production_out, inventory_out, dos_out = ConstrainedPlan(
-            req_prod, capacity, production, inventory, sales, dos,
-            pullin_desired_order, pushout_desired_order, doh_floor_ceil_df1
-        )
-    st.success("✅ Constrained Plan executed successfully!")
-    run_balance_result = (production_out, inventory_out, dos_out)
-
-st.sidebar.header("⚙️ Data Frames Viewer")
-dataset_choice = st.sidebar.selectbox(
-    "Select a dataset to view:",
-    ["req_prod", "capacity", "production", "inventory", "sales", "dos"]
-)
-
-# Add filter controls
-def get_columns_for_choice(choice):
-    if choice == "req_prod":
-        return req_prod.columns.tolist()
-    elif choice == "capacity":
-        return capacity.columns.tolist()
-    elif choice == "production":
-        return production.columns.tolist()
-    elif choice == "inventory":
-        return inventory.columns.tolist()
-    elif choice == "sales":
-        return sales.columns.tolist()
-    elif choice == "dos":
-        return dos.columns.tolist()
-    else:
-        return []
-
-filter_column = st.sidebar.selectbox(
-    "Filter column:",
-    options=get_columns_for_choice(dataset_choice)
-)
-filter_value = st.sidebar.text_input("Filter value (exact match):", "")
-
-# Helper to filter and edit any DataFrame
-from streamlit import column_config
-
-def filter_and_edit(df, name):
-    filtered_df = df
-    if filter_value:
-        if filter_column in df.columns:
-            filtered_df = df[df[filter_column].astype(str) == filter_value]
-    # All columns editable by default
-    edited_df = st.data_editor(
-        filtered_df,
-        key=f"edit_{name}",
-        num_rows="dynamic",
-        column_config={col: column_config.Column() for col in filtered_df.columns}
-    )
-    return edited_df
-
-# Show and edit the selected dataset
-if dataset_choice == "req_prod":
-    req_prod = filter_and_edit(req_prod, "req_prod")
-elif dataset_choice == "capacity":
-    capacity = filter_and_edit(capacity, "capacity")
-elif dataset_choice == "production":
-    production = filter_and_edit(production, "production")
-elif dataset_choice == "inventory":
-    inventory = filter_and_edit(inventory, "inventory")
-elif dataset_choice == "sales":
-    sales = filter_and_edit(sales, "sales")
-elif dataset_choice == "dos":
-    dos = filter_and_edit(dos, "dos")
-
-# After the table, show the results if the button was clicked
-if run_balance_result is not None:
-    production_out, inventory_out, dos_out = run_balance_result
-    st.subheader("📦 Updated Production")
-    st.data_editor(production_out, key="edit_production_out", num_rows="dynamic")
-
-    st.subheader("🏭 Updated Inventory")
-    st.data_editor(inventory_out, key="edit_inventory_out", num_rows="dynamic")
-
-    st.subheader("📈 Updated DOS")
-    st.data_editor(dos_out, key="edit_dos_out", num_rows="dynamic")
-
