@@ -118,34 +118,50 @@ def ConstrainedPlan(req_prod,capacity,production,inventory,sales,dos,pullin_desi
     def update_value_pull(pull_value, car_model, add_month, sub_month, model_year):
         # Define a helper function for updates to avoid redundancy
         def update_data(df, model_col, year_col):
-            # Check if the car model and MODEL_YEAR exist in the DataFrame
+            # Defensive checks
             if car_model in df[model_col].values:
-                if add_month in df.columns:
-                    pass  # Placeholder for logic
                 if sub_month in df.columns:
-                    pass  # Placeholder for logic
-            # Assuming car_model, model_year, model_col, year_col, and month_plus1 are defined
-            value = df.loc[(df[model_col] == car_model) & (df[year_col] == model_year), sub_month].values[0]
-            print("update production: ", df.loc[(df[model_col] == car_model) & (df[year_col] == model_year), sub_month])
-            if value<0:
-                print("--------------------------negative production found for pull------------------------------")
-        # Update production and inventory data with the added MODEL_YEAR condition
+                    selection = df.loc[
+                        (df[model_col] == car_model) & (df[year_col] == model_year),
+                        sub_month
+                    ]
+                    if not selection.empty:
+                        value = selection.values[0]
+                        print("update production: ", selection)
+                        if value < 0:
+                            print("--------------------------negative production found for pull/push------------------------------")
+                    else:
+                        print(f"Warning: No {car_model}, {model_year}, {sub_month} found in DataFrame!")
+                        # Optionally handle missing value case here (e.g., skip or use a default)
+                else:
+                    print(f"Warning: Column {sub_month} does not exist in DataFrame!")
+            else:
+                print(f"Warning: Car model {car_model} not found in DataFrame!")
+
         update_data(production, "PRODUCT_TRIM", "MODEL_YEAR")
     def update_value_push(push_value, car_model, add_month, sub_month, model_year):
     # Define a helper function for updates to avoid redundancy
         def update_data(df, model_col, year_col):
-            # Check if the car model and MODEL_YEAR exist in the DataFrame
+            # Defensive checks
             if car_model in df[model_col].values:
-                if add_month in df.columns:
-                    pass  # Placeholder for logic
                 if sub_month in df.columns:
-                    pass  # Placeholder for logic
-            # Assuming car_model, model_year, model_col, year_col, and month_plus1 are defined
-            value = df.loc[(df[model_col] == car_model) & (df[year_col] == model_year), sub_month].values[0]
-            print("update production: ", df.loc[(df[model_col] == car_model) & (df[year_col] == model_year), sub_month])
-            if value<0:
-                print("--------------------------negative production found for push------------------------------")
-        # Update production and inventory data with the added MODEL_YEAR condition
+                    selection = df.loc[
+                        (df[model_col] == car_model) & (df[year_col] == model_year),
+                        sub_month
+                    ]
+                    if not selection.empty:
+                        value = selection.values[0]
+                        print("update production: ", selection)
+                        if value < 0:
+                            print("--------------------------negative production found for pull/push------------------------------")
+                    else:
+                        print(f"Warning: No {car_model}, {model_year}, {sub_month} found in DataFrame!")
+                        # Optionally handle missing value case here (e.g., skip or use a default)
+                else:
+                    print(f"Warning: Column {sub_month} does not exist in DataFrame!")
+            else:
+                print(f"Warning: Car model {car_model} not found in DataFrame!")
+
         update_data(production, "PRODUCT_TRIM", "MODEL_YEAR")
     def generate_month_list(year):
         months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
@@ -767,3 +783,4 @@ if run_balance_result is not None:
 
     st.subheader("📈 Updated DOS")
     st.data_editor(dos_out, key="edit_dos_out", num_rows="dynamic")
+
