@@ -20,13 +20,12 @@ def ConstrainedPlan(req_prod,capacity,production,inventory,sales,dos,pullin_desi
     production = production.drop(production.columns[3:5], axis=1)
     
     
-    # last_month_invt = inventory.iloc[:, [0, 1, 2, 4]]
-    # inventory = inventory.drop(inventory.columns[3:5], axis=1)
-    sales = sales.drop(sales.columns[3:5], axis=1)
-    dos = dos.drop(dos.columns[3:5], axis=1)
-
+    # Corrected index 4 to 3 for initial inventory preservation
     last_month_invt = inventory.iloc[:, [0, 1, 2, 3]]
     inventory = inventory.drop(inventory.columns[3:5], axis=1)
+    # Keeping the original drop logic for consistency
+    sales = sales.drop(sales.columns[3:5], axis=1)
+    dos = dos.drop(dos.columns[3:5], axis=1)
     
     # print('DOS :', dos.columns)
     total_production = req_prod.sum(axis = 0, numeric_only = True)
@@ -104,7 +103,9 @@ def ConstrainedPlan(req_prod,capacity,production,inventory,sales,dos,pullin_desi
         #if production month_beg of last month
         #sub = [mar 25, apr 25]
         if sublist[0] == inventory.columns[3]:
-            prev_month_invt = last_month_invt.loc[(inventory['PRODUCT_TRIM'] == car_model) & (inventory['MODEL_YEAR'] == model_year), prev_month]
+            # FIX: If the month being updated is the first planning month (which is at index 3 after drops), 
+            # use the last_month_invt which holds the pre-planning inventory value (index 3 from original DF).
+            prev_month_invt = last_month_invt.loc[(last_month_invt['PRODUCT_TRIM'] == car_model) & (last_month_invt['MODEL_YEAR'] == model_year), prev_month]
         else:
             prev_month_invt = inventory.loc[(inventory['PRODUCT_TRIM'] == car_model) & (inventory['MODEL_YEAR'] == model_year), prev_month]
         i = 0
@@ -114,46 +115,48 @@ def ConstrainedPlan(req_prod,capacity,production,inventory,sales,dos,pullin_desi
             #iteration 2 jan: prev month = dec, i =1
             if i>=1:
                 prev_month = sublist[i-1]
-                prev_month_invt = inventory.loc[(inventory['PRODUCT_TRIM'] == car_model) & (inventory['MODEL_YEAR'] == model_year), prev_month]
+                # Ensure we check the original inventory DF if the previous month was before the planning horizon.
+                # This complex check assumes the `prev_month` variable passed in the first iteration correctly points 
+                # to the pre-planning month column name inside `last_month_invt`.
+                if prev_month not in inventory.columns: # Check if the previous month is one of the removed columns (pre-planning)
+                     # Assuming the previous month is the one saved in last_month_invt
+                    prev_month_invt = last_month_invt.loc[(last_month_invt['PRODUCT_TRIM'] == car_model) & (last_month_invt['MODEL_YEAR'] == model_year), prev_month]
+                else:
+                    prev_month_invt = inventory.loc[(inventory['PRODUCT_TRIM'] == car_model) & (inventory['MODEL_YEAR'] == model_year), prev_month]
             i+=1
-            inventory.loc[(inventory['PRODUCT_TRIM'] == car_model) & (inventory['MODEL_YEAR'] == model_year), month] =  prev_month_invt + production.loc[(production['PRODUCT_TRIM'] == car_model) & (production['MODEL_YEAR'] == model_year), month] - sales.loc[(sales['PRODUCT_TRIM'] == car_model) & (sales['MODEL_YEAR'] == model_year), month]
+            
+            # Apply the inventory update formula
+            inventory.loc[(inventory['PRODUCT_TRIM'] == car_model) & (inventory['MODEL_YEAR'] == model_year), month] =  \
+                prev_month_invt + \
+                production.loc[(production['PRODUCT_TRIM'] == car_model) & (production['MODEL_YEAR'] == model_year), month] - \
+                sales.loc[(sales['PRODUCT_TRIM'] == car_model) & (sales['MODEL_YEAR'] == model_year), month]
     
     def update_value_pull(pull_value, car_model, add_month, sub_month, model_year):
         # Define a helper function for updates to avoid redundancy
         def update_data(df, model_col, year_col):
-            # Check if the car model and MODEL_YEAR exist in the DataFrame
-            if car_model in df[model_col].values:
-                if add_month in df.columns:
-                    pass  # Placeholder for logic
-                if sub_month in df.columns:
-                    pass  # Placeholder for logic
-                # Assuming car_model, model_year, model_col, year_col, and month_plus1 are defined
-                value = df.loc[(df[model_col] == car_model) & (df[year_col] == model_year), sub_month].values[0]
-                print("update production: ", df.loc[(df[model_col] == car_model) & (df[year_col] == model_year), sub_month])
-                if value<0:
-                    print("--------------------------negative production found for pull------------------------------")
-        # Update production and inventory data with the added MODEL_YEAR condition
+            # The actual update logic:
+            if pull_value > 0:
+                df.loc[(df[model_col] == car_model) & (df[year_col] == model_year), add_month] += pull_value
+                df.loc[(df[model_col] == car_model) & (df[year_col] == model_year), sub_month] -= pull_value
+
+        # Update production data
         update_data(production, "PRODUCT_TRIM", "MODEL_YEAR")
+        
     def update_value_push(push_value, car_model, add_month, sub_month, model_year):
     # Define a helper function for updates to avoid redundancy
         def update_data(df, model_col, year_col):
-            # Check if the car model and MODEL_YEAR exist in the DataFrame
-            if car_model in df[model_col].values:
-                if add_month in df.columns:
-                    pass  # Placeholder for logic
-                if sub_month in df.columns:
-                    pass  # Placeholder for logic
-                # Assuming car_model, model_year, model_col, year_col, and month_plus1 are defined
-                value = df.loc[(df[model_col] == car_model) & (df[year_col] == model_year), sub_month].values[0]
-                print("update production: ", df.loc[(df[model_col] == car_model) & (df[year_col] == model_year), sub_month])
-                if value<0:
-                    print("--------------------------negative production found for push------------------------------")
+            # The actual update logic:
+            if push_value > 0:
+                df.loc[(df[model_col] == car_model) & (df[year_col] == model_year), add_month] += push_value
+                df.loc[(df[model_col] == car_model) & (df[year_col] == model_year), sub_month] -= push_value
         # Update production and inventory data with the added MODEL_YEAR condition
         update_data(production, "PRODUCT_TRIM", "MODEL_YEAR")
+
     def generate_month_list(year):
         months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
         month_list = [f"{month} {year}" for month in months]
         return month_list
+        
     def next_two_months(month_list):
         # Define the month names and their corresponding next months
         months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
@@ -171,12 +174,14 @@ def ConstrainedPlan(req_prod,capacity,production,inventory,sales,dos,pullin_desi
             next_months.append(f"{months[next_month_index]} {next_year}")
         # Add the new months to the original list
         return next_months
+        
     def find_common_elements_ordered(list1, list2):
         # Create a set from the second list for faster lookup
         set_list2 = set(list2)
         # Use a list comprehension to maintain order from list1
         common_elements = [item for item in list1 if item in set_list2]
         return common_elements
+        
     # just extarct what year data is present
     def extract_years(month_year_list):
         years = set()  # Use a set to avoid duplicates
@@ -185,9 +190,11 @@ def ConstrainedPlan(req_prod,capacity,production,inventory,sales,dos,pullin_desi
             year = item.split()[1]
             years.add(year)
         return list(years)
+        
     years_present = extract_years(all_keys)
     years_present = sorted(years_present)
     # print('years_present :', years_present)
+    
     for year_num in years_present:
         yr_month_list = generate_month_list(year_num)
         actual_data_present = find_common_elements_ordered(yr_month_list, all_keys)
@@ -424,19 +431,15 @@ def ConstrainedPlan(req_prod,capacity,production,inventory,sales,dos,pullin_desi
                 
                 if is_final_year == 0:
                     pass  # Fix: ensure this block is not empty
-                    #######Now current month should stop at year_pull_in_end_month
                     # print('ny_year_month---and keys[curr_month_num]',ny_year_month,keys[curr_month_num])
+                
                 while surplus > 0:
-                    pass  # Placeholder for logic to resolve surplus
-                    # Condition to stop on next year Jan as Target
-                    # print("~~~~~~~~~~~~ Current values in adjust build slot ~~~~~~~~~~~~~~~~~~~~~\n",all_data)
-                    # if ('Dec' in keys[i]):
-                    #    print("***--------Target month reached next year Jan-------saving last changes and closing operation***")
-                    #    break
-                    # Iterate through car models in the defined order (GT -> Touring -> Pure)
                     
                     # Target month is keys[i + 1], which is safe due to the check at the start of the loop
                     next_month = keys[i + 1] # Now it's safe to access
+                    
+                    # CRITICAL FIX 4: Flag to check if any adjustment was made
+                    adjustment_made = False
                     
                     try:
                         pass  # Placeholder for logic
@@ -484,52 +487,69 @@ def ConstrainedPlan(req_prod,capacity,production,inventory,sales,dos,pullin_desi
                                      pass
                             # Determine the pull value and update
                             pull_value = min(sub_val, adjustable_invt_floor)
-                            # print(f"Pull value: {pull_value} for car: {car_model}, MODEL_YEAR: {row['MODEL_YEAR']}, month: {month}")
-                            # Update values and adjust surplus
-                            start_index = month_list_invt.index(month)
-                            end_index = month_list_invt.index(next_month)
-                            prev_month = month_list_invt[start_index-1]
-                            # Sublist inclusive of start and end
-                            sublist = month_list_invt[start_index:end_index + 1]
-                            update_value_pull(pull_value, car_model, month, next_month, model_year)
-                            update_inventory(sublist,car_model,model_year,prev_month)
-                            surplus -= pull_value
-                            ####### adjust_build_slot  data list updates here
-                            #change super data
-                            all_data[curr_month] = all_data[curr_month] - pull_value
-                            all_data[next_month] = all_data[next_month] + pull_value
-                            # change loop_data
-                            data[curr_month] = data[curr_month] - pull_value
-                            data[next_month] = data[next_month] + pull_value
-                            #DOS CHECK 1 for pulled out record
-                            # Sample sales forecast data
-                            end_of_month_inventory = inventory.loc[inventory.index[idx], keys[curr_month_num]]
-                            try:
-                                sales_values = sales.loc[sales.index[idx], special_inv_month_key_ny[curr_month_num+1:]].values[:]
-                            except:
-                                #print('Breaking at Sales Values in except in iteration 3')
-                                pass                                         
-                            sales_values = sales_values.astype(int).tolist()
-                            days_per_month = []
-                            for dayinmon in special_inv_month_key_ny[curr_month_num+1:]:
-                                days_per_month.append(days_in_month(dayinmon))
-                            # Calculate total days of supply
-                            total_days_of_supply = calculate_days_of_supply(end_of_month_inventory, sales_values,days_per_month)
-                            dos.loc[(dos['PRODUCT_TRIM']==car_model) & (dos["MODEL_YEAR"] == model_year),curr_month_num] = float(total_days_of_supply)
-                            #DOS CHECK 2 for pulled in record
-                            end_of_month_inventory_ith = inventory.loc[inventory.index[idx], keys[i+1]]
-                            sales_values_ith = sales.loc[sales.index[idx], special_inv_month_key_ny[i+2:]].values[:]
-                            sales_values_ith = sales_values_ith.astype(int).tolist()
-                            days_per_month_target = []
-                            for dayinmon in special_inv_month_key_ny[i+2:]:
-                                days_per_month_target.append(days_in_month(dayinmon))
-                            # Calculate total days of supply
-                            total_days_of_supply_ith = calculate_days_of_supply(end_of_month_inventory_ith, sales_values_ith,days_per_month_target)
-                            dos.loc[(dos['PRODUCT_TRIM']==car_model) & (dos["MODEL_YEAR"] == model_year),keys[i+1]] = float(total_days_of_supply_ith)
-                            #print(
+                            
+                            # CRITICAL FIX 4: Check if an actual adjustment is being made
+                            if pull_value > 0:
+                                adjustment_made = True
+                                # print(f"Pull value: {pull_value} for car: {car_model}, MODEL_YEAR: {row['MODEL_YEAR']}, month: {month}")
+                                # Update values and adjust surplus
+                                start_index = month_list_invt.index(month)
+                                end_index = month_list_invt.index(next_month)
+                                prev_month = month_list_invt[start_index-1]
+                                # Sublist inclusive of start and end
+                                sublist = month_list_invt[start_index:end_index + 1]
+                                update_value_pull(pull_value, car_model, month, next_month, model_year)
+                                update_inventory(sublist,car_model,model_year,prev_month)
+                                surplus -= pull_value
+                                ####### adjust_build_slot  data list updates here
+                                #change super data
+                                all_data[curr_month] = all_data[curr_month] - pull_value
+                                all_data[next_month] = all_data[next_month] + pull_value
+                                # change loop_data
+                                data[curr_month] = data[curr_month] - pull_value
+                                data[next_month] = data[next_month] + pull_value
+                                #DOS CHECK 1 for pulled out record
+                                # Sample sales forecast data
+                                end_of_month_inventory = inventory.loc[inventory.index[idx], keys[curr_month_num]]
+                                try:
+                                    sales_values = sales.loc[sales.index[idx], special_inv_month_key_ny[curr_month_num+1:]].values[:]
+                                except:
+                                    #print('Breaking at Sales Values in except in iteration 3')
+                                    pass                                         
+                                sales_values = sales_values.astype(int).tolist()
+                                days_per_month = []
+                                for dayinmon in special_inv_month_key_ny[curr_month_num+1:]:
+                                    days_per_month.append(days_in_month(dayinmon))
+                                # Calculate total days of supply
+                                total_days_of_supply = calculate_days_of_supply(end_of_month_inventory, sales_values,days_per_month)
+                                # CRITICAL FIX 5: Use month column name (string), not integer index
+                                dos.loc[(dos['PRODUCT_TRIM']==car_model) & (dos["MODEL_YEAR"] == model_year), keys[curr_month_num]] = float(total_days_of_supply)
+                                
+                                #DOS CHECK 2 for pulled in record
+                                end_of_month_inventory_ith = inventory.loc[inventory.index[idx], keys[i+1]]
+                                sales_values_ith = sales.loc[sales.index[idx], special_inv_month_key_ny[i+2:]].values[:]
+                                sales_values_ith = sales_values_ith.astype(int).tolist()
+                                days_per_month_target = []
+                                for dayinmon in special_inv_month_key_ny[i+2:]:
+                                    days_per_month_target.append(days_in_month(dayinmon))
+                                # Calculate total days of supply
+                                total_days_of_supply_ith = calculate_days_of_supply(end_of_month_inventory_ith, sales_values_ith,days_per_month_target)
+                                dos.loc[(dos['PRODUCT_TRIM']==car_model) & (dos["MODEL_YEAR"] == model_year),keys[i+1]] = float(total_days_of_supply_ith)
 
+                            # Break inner loops if surplus is exhausted
+                            if surplus <= 0:
+                                break
+                        
+                        if surplus <= 0:
+                            break
+                        
+                    # CRITICAL FIX 6: Exit the while loop if surplus remains but no adjustment was made
+                    if surplus > 0 and not adjustment_made:
+                        print(f"Warning: Could not fully resolve surplus in {keys[curr_month_num]}. Breaking while loop to prevent hang.")
+                        break
+
+    # CRITICAL FIX 7: Ensure the function returns the results outside of any loop
     return production, inventory, dos
-
 
 ############################## UI CODE #########################################################
 import streamlit as st
@@ -656,4 +676,5 @@ if run_balance_result is not None:
 
     st.subheader("📈 Updated DOS")
     st.data_editor(dos_out, key="edit_dos_out", num_rows="dynamic")
+
 
