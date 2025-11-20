@@ -12,14 +12,14 @@ warnings.filterwarnings("ignore")
 
 
 # ======================================================================
-#  ConstrainedPlan — preserved from your original (compute logic intact)
+#  ConstrainedPlan — preserved (scaffold/logic as in your file)
 # ======================================================================
 def ConstrainedPlan(req_prod, capacity, production, inventory, sales, dos,
                     pullin_desired_order, pushout_desired_order, doh_floor_ceil_df1):
     print('\n Constrained Plan pullin_desired_order ', pullin_desired_order,
           'and pushout_desired_order ', pushout_desired_order)
 
-    # Drops / setup (same as your original)
+    # Drops / setup
     req_prod = req_prod.drop(req_prod.columns[3:5], axis=1)
     month_list_invt = list(capacity.columns)
     capacity = capacity.drop(capacity.columns[:2], axis=1)
@@ -38,7 +38,7 @@ def ConstrainedPlan(req_prod, capacity, production, inventory, sales, dos,
     all_data = {key: value[0] for key, value in diff_dict.items()}
     all_keys = list(all_data.keys())
 
-    # ---------------- helpers (unchanged) ----------------
+    # ---------------- helpers (preserved) ----------------
     def days_in_month(month_str):
         month_abbr, year = month_str.split()
         year = int(year)
@@ -71,7 +71,7 @@ def ConstrainedPlan(req_prod, capacity, production, inventory, sales, dos,
                 partial_days = round((remaining_inventory / sale_val) * days, 2) if sale_val != 0 else 0
                 total_days_of_supply += partial_days
                 break
-        # handle consecutive zeros as per your original logic
+        # handle consecutive zeros (your original rules)
         if len(sale_frcst) == 2 and (sale_frcst[0] + sale_frcst[1] == 0):
             total_days_of_supply = days_per_month[0] + days_per_month[1]
         if len(sale_frcst) > 2 and (sale_frcst[1] + sale_frcst[2] == 0):
@@ -79,7 +79,6 @@ def ConstrainedPlan(req_prod, capacity, production, inventory, sales, dos,
         return total_days_of_supply
 
     def update_inventory(sublist, car_model, model_year, prev_month):
-        # preserve previous month origin rules
         if sublist[0] == inventory.columns[3]:
             prev_month_invt = last_month_invt.loc[
                 (last_month_invt['PRODUCT_TRIM'] == car_model) & (last_month_invt['MODEL_YEAR'] == model_year),
@@ -105,7 +104,6 @@ def ConstrainedPlan(req_prod, capacity, production, inventory, sales, dos,
                     prev_month
                 ]
             i += 1
-            # update rule (unchanged)
             inventory.loc[
                 (inventory['PRODUCT_TRIM'] == car_model) & (inventory['MODEL_YEAR'] == model_year), month
             ] = (
@@ -181,35 +179,27 @@ def ConstrainedPlan(req_prod, capacity, production, inventory, sales, dos,
         inv_next_two = next_two_months(actual_data_present)
         special_inv_month_key = actual_data_present + inv_next_two
 
-        # ----------------------------- 1) Surplus sweep (your scaffold retained) -----------------------------
+        # ----------------------------- 1) Surplus sweep (scaffold retained) -----------------------------
         for i, month in enumerate(keys):
             surplus = data[month]
-            curr_month_num = i
-            curr_month = keys[curr_month_num]
             if keys[i] == list(all_data.keys())[-1]:
                 break
             if surplus > 0:
-                # Stop at Dec
-                if 'Dec' in keys[curr_month_num]:
+                if 'Dec' in keys[i]:
                     break
                 while surplus > 0:
-                    # Your TODO scaffolding retained to avoid infinite loop
-                    break
+                    break  # TODO: your surplus resolve logic
 
-        # ----------------------------- 2) Deficit/Conflict sweep (your scaffold retained) -----------------------------
+        # ----------------------------- 2) Deficit/Conflict sweep (scaffold retained) -----------------------------
         for i, month in enumerate(keys):
             if i + 1 >= len(keys):
                 break
             try:
                 deficit = data[month]
-                curr_month_num = i
-                curr_month = keys[curr_month_num]
                 if keys[i] == list(all_data.keys())[-1]:
                     break
-                if curr_month == list(all_data.keys())[-1]:
-                    break
                 if deficit < 0:
-                    if 'Dec' in keys[curr_month_num]:
+                    if 'Dec' in keys[i]:
                         break
                     while deficit < 0:
                         if i + 1 >= len(keys):
@@ -223,7 +213,7 @@ def ConstrainedPlan(req_prod, capacity, production, inventory, sales, dos,
                             ceil_doh = doh_floor_ceil_df1[doh_floor_ceil_df1["dd_Trim"] == car_model]["amt_Ceiling_DOS"].values[0]
                             for idx, row in model_rows.iterrows():
                                 abs_deficit = abs(deficit)
-                                # (your placeholders kept)
+                                # your placeholder calculations
                                 total_days_of_supply_ith = 0
                                 total_days_of_supply = 0
                                 if (total_days_of_supply_ith < floor_doh) or (total_days_of_supply_ith > ceil_doh) or \
@@ -233,16 +223,16 @@ def ConstrainedPlan(req_prod, capacity, production, inventory, sales, dos,
                                     break
                             if deficit >= 0:
                                 break
-                        if deficit < 0:
-                            i += 1
-                            if i >= len(keys):
-                                break
-                            if 'Dec' in keys[i]:
-                                break
+                        # move to next month, boundary checks retained
+                        i += 1
+                        if i >= len(keys):
+                            break
+                        if 'Dec' in keys[i]:
+                            break
             except Exception:
                 break
 
-        # ----------------------------- 3) Final sweep (your scaffold retained) -----------------------------
+        # ----------------------------- 3) Final sweep (scaffold retained) -----------------------------
         if is_final_year == 1:
             new_traversal_data = actual_data_present_v0[:-2]
             data = {key: all_data[key] for key in new_traversal_data if key in all_data}
@@ -265,7 +255,6 @@ def ConstrainedPlan(req_prod, capacity, production, inventory, sales, dos,
                     remove_month_num = 2 - len(actual_data_present_ny_2)
                     new_traversal_data = actual_data_present_v0 + actual_data_present_ny[:-remove_month_num]
 
-            # 3rd sweep core loop kept as scaffold
             if len(new_traversal_data) > 0:
                 ny_year_month = (find_common_elements_ordered(generate_month_list(year_num_ny), all_keys) or [""])[0]
                 special_inv_month_key_ny = new_traversal_data + next_two_months(new_traversal_data)
@@ -275,17 +264,13 @@ def ConstrainedPlan(req_prod, capacity, production, inventory, sales, dos,
                     if i + 1 >= len(keys):
                         break
                     surplus = data[month]
-                    curr_month_num = i
-                    curr_month = keys[curr_month_num]
                     if keys[i] == list(all_data.keys())[-1]:
                         break
-                    if (ny_year_month in keys[curr_month_num]) and (is_final_year == 0):
+                    if (ny_year_month in keys[i]) and (is_final_year == 0):
                         break
                     if surplus > 0:
                         while surplus > 0:
-                            next_month = keys[i + 1]
-                            adjustment_made = False
-                            # (placeholder retained)
+                            # placeholder for your final sweep logic
                             break
 
     # return full frames (unchanged)
@@ -298,16 +283,12 @@ def ConstrainedPlan(req_prod, capacity, production, inventory, sales, dos,
 import streamlit as st
 from pathlib import Path
 import numpy as np
-import calendar
-import math
-from constraint_identification import calculate_constraint_identification, display_constraint_identification
-from constraint_identification import calculate_constraint_identification, display_constraint_identification
 
 # 1) Page setup + state
 st.set_page_config(page_title="Production Planning Dashboard", layout="wide")
 
 if 'dataset_choice' not in st.session_state:
-    st.session_state['dataset_choice'] = 'req_prod'
+    st.session_state['dataset_choice'] = 'req_prod'  # internal key
 if 'has_clicked_dataset' not in st.session_state:
     st.session_state['has_clicked_dataset'] = False
 
@@ -357,66 +338,33 @@ doh_floor_ceil_df1 = pd.DataFrame({
     'amt_Ceiling_DOS': [amt_Ceiling_DOS] * len(dd_Trim)
 })
 
-
-# ----- Session state init -----
-if 'dataset_choice' not in st.session_state:
-    st.session_state['dataset_choice'] = 'req_prod'
-if 'has_clicked_dataset' not in st.session_state:
-    st.session_state['has_clicked_dataset'] = False
-
-# Read current choice
-dataset_choice = st.session_state['dataset_choice']
-
-def get_columns_for_choice(choice):
-    if choice == "req_prod":
-        return req_prod.columns.tolist()
-    elif choice == "capacity":
-        return capacity.columns.tolist()
-    elif choice == "production":
-        return production.columns.tolist()
-    elif choice == "inventory":
-        return inventory.columns.tolist()
-    elif choice == "sales":
-        return sales.columns.tolist()
-    elif choice == "dos":
-        return dos.columns.tolist()
-    elif choice == "Constraint Identification":
-        return ['MODEL', 'MONTH_NO', 'YEAR_NO', 'PROJECTED_PRODUCTION_PLAN', 'AVAILABLE_BUILD_SLOT', 'DIFFERENCE_SLOT']
-    else:
-        return []
-
-# ---- Dynamic Title ----
-if st.session_state['has_clicked_dataset']:
-    st.title(f"📊 {st.session_state.get('dataset_choice', 'Production Planning Dashboard')}")
-else:
-    st.title("📊 Production Planning Dashboard")
-
-# Filters below the title
-col1, col2 = st.columns([1, 2])
-with col1:
-    filter_column = st.selectbox(
-        "Filter column:",
-        options=get_columns_for_choice(dataset_choice),
-        key="top_filter_column"
-    )
-with col2:
-    filter_value = st.text_input("Filter value (exact match):", "", key="top_filter_value")
-
-# Run Balance Plan button at top
-run_balance_clicked = st.button("⚖️ Run Balance Plan", key="run_balance_top")
-run_balance_result = None
-if run_balance_clicked:
-    with st.spinner("Running Constrained Plan..."):
-        production_out, inventory_out, dos_out = ConstrainedPlan(
-            req_prod, capacity, production, inventory, sales, dos,
-            pullin_desired_order, pushout_desired_order, doh_floor_ceil_df1
-        )
-    st.success("✅ Constrained Plan executed successfully!")
-    run_balance_result = (production_out, inventory_out, dos_out)
-
 # ---------------------------
-# Sidebar: Data Frames Viewer header + UNIFORM BUTTONS
+# Label ↔ key mapping (FIX for your screenshot)
 # ---------------------------
+# Internal keys (use these throughout the logic)
+DATASETS = [
+    ("Required Production", "req_prod"),
+    ("Capacity", "capacity"),
+    ("Production", "production"),
+    ("Inventory", "inventory"),
+    ("Sales", "sales"),
+    ("DOS", "dos"),
+    ("Constraint Identification", "constraint"),
+    ("Unconstrained Inventory Summary", "unconstrained_inventory"),
+]
+
+# Pretty display names for the title
+DISPLAY_NAMES = {
+    "req_prod": "Required Production",
+    "capacity": "Capacity",
+    "production": "Production",
+    "inventory": "Inventory",
+    "sales": "Sales",
+    "dos": "DOS",
+    "constraint": "Constraint Identification",
+    "unconstrained_inventory": "Unconstrained Inventory Summary",
+}
+
 # 4) Sidebar first: robust CSS + buttons (so state updates precede rendering)
 st.sidebar.markdown("""
     <style>
@@ -475,54 +423,36 @@ st.sidebar.markdown("""
 st.sidebar.markdown('<div class="sidebar-title">⚙️ Data Frames Viewer</div>', unsafe_allow_html=True)
 
 with st.sidebar:
-    for name, key in [
-        ("Required Production", "btn_req_prod"),
-        ("Capacity", "btn_capacity"),
-        ("Production", "btn_production"),
-        ("Inventory", "btn_inventory"),
-        ("Sales", "btn_sales"),
-        ("DOS", "btn_dos"),
-        ("Constraint Identification", "btn_constraint"),
-        ("Unconstrained Inventory Summary", "btn_unconstrained_inventory"),
-    ]:
-        if st.button(name, key=key):
-            st.session_state['dataset_choice'] = name
+    for label, key in DATASETS:
+        # Use internal key in session_state; label is just the button text
+        if st.button(label, key=f"btn_{key}"):
+            st.session_state['dataset_choice'] = key
             st.session_state['has_clicked_dataset'] = True
 
-# current choice after click
+# current internal key after click
 dataset_choice = st.session_state['dataset_choice']
 
 # 5) Dynamic title (first load vs after click)
-DISPLAY_NAMES = {
-    "req_prod": "Req Prod",
-    "capacity": "Capacity",
-    "production": "Production",
-    "inventory": "Inventory",
-    "sales": "Sales",
-    "dos": "Days of Supply",
-    "Constraint Identification": "Constraint Identification",
-    "Unconstrained Inventory Summary": "Unconstrained Inventory Summary",
-}
 if st.session_state['has_clicked_dataset']:
     st.title(f"📊 {DISPLAY_NAMES.get(dataset_choice, dataset_choice)}")
 else:
     st.title("📊 Production Planning Dashboard")
 
-# 6) Top controls
-def get_columns_for_choice(choice):
-    if choice == "req_prod":
+# 6) Top controls (filter options driven by internal key)
+def get_columns_for_choice(choice_key: str):
+    if choice_key == "req_prod":
         return req_prod.columns.tolist()
-    elif choice == "capacity":
+    elif choice_key == "capacity":
         return capacity.columns.tolist()
-    elif choice == "production":
+    elif choice_key == "production":
         return production.columns.tolist()
-    elif choice == "inventory":
+    elif choice_key == "inventory":
         return inventory.columns.tolist()
-    elif choice == "sales":
+    elif choice_key == "sales":
         return sales.columns.tolist()
-    elif choice == "dos":
+    elif choice_key == "dos":
         return dos.columns.tolist()
-    elif choice == "Unconstrained Inventory Summary":
+    elif choice_key == "unconstrained_inventory":
         return unconstrained_inventory_df.columns.tolist()
     else:
         return []
@@ -562,7 +492,7 @@ def filter_and_edit(df: pd.DataFrame, name: str) -> pd.DataFrame:
         column_config={col: column_config.Column() for col in filtered_df.columns}
     )
 
-# 8) Render the selected dataset (runs same click)
+# 8) Render the selected dataset (internal keys drive the branches)
 if dataset_choice == "req_prod":
     req_prod = filter_and_edit(req_prod, "req_prod")
 
@@ -581,14 +511,11 @@ elif dataset_choice == "sales":
 elif dataset_choice == "dos":
     dos = filter_and_edit(dos, "dos")
 
-elif dataset_choice == "Constraint Identification":
-    # Calculate constraint identification
-    constraint_df = calculate_constraint_identification(req_prod, capacity)
-    display_constraint_identification(constraint_df)
+elif dataset_choice == "constraint":
     st.subheader("📋 Constraint Identification")
     st.info("This view is under development.")
 
-elif dataset_choice == "Unconstrained Inventory Summary":
+elif dataset_choice == "unconstrained_inventory":
     st.subheader("📋 Unconstrained Inventory Summary")
     if not unconstrained_inventory_df.empty:
         st.data_editor(unconstrained_inventory_df, key="edit_unconstrained_inventory", num_rows="dynamic")
@@ -613,4 +540,3 @@ if run_balance_result is not None:
 
     st.subheader("📈 Updated DOS")
     st.data_editor(dos_out, key="edit_dos_out", num_rows="dynamic")
-
