@@ -23,6 +23,7 @@ def ConstrainedPlan(req_prod,capacity,production,inventory,sales,dos,pullin_desi
     # Keeping the original drop logic for consistency
     sales = sales.drop(sales.columns[3:5], axis=1)
     dos = dos.drop(dos.columns[3:5], axis=1)
+
     total_production = req_prod.sum(axis = 0, numeric_only = True)
     difference = capacity.subtract(total_production[capacity.columns])
     diff_dict = difference.to_dict()
@@ -53,40 +54,58 @@ def ConstrainedPlan(req_prod,capacity,production,inventory,sales,dos,pullin_desi
         total_days_of_supply = 0
         sale_frcst = []
         for sale, days in zip(sales_forecast, days_per_month):
-            if remaining_inventory >= sale and remaining_inventory!=0:
+            if remaining_inventory >= sale and remaining_inventory != 0:
                 total_days_of_supply += days
                 remaining_inventory -= sale
                 sale_frcst.append(sale)
             else:
-                partial_days = round((remaining_inventory / sale) * days,2)
+                partial_days = round((remaining_inventory / sale) * days, 2)
                 total_days_of_supply += partial_days
                 break
-        if len(sale_frcst)== 2:
-            if sale_frcst[0]+sale_frcst[1] == 0:
-                total_days_of_supply = days_per_month[0] + days_per_month[1]
-        if len(sale_frcst)> 2:
-            if sale_frcst[1]+sale_frcst[2] == 0:
-                total_days_of_supply = days_per_month[0] + days_per_month[1]
+        # handle consecutive zero sales forecast entries
+        if len(sale_frcst) == 2 and (sale_frcst[0] + sale_frcst[1] == 0):
+            total_days_of_supply = days_per_month[0] + days_per_month[1]
+        if len(sale_frcst) > 2 and (sale_frcst[1] + sale_frcst[2] == 0):
+            total_days_of_supply = days_per_month[0] + days_per_month[1]
         return total_days_of_supply
 
-    def update_inventory(sublist,car_model,model_year,prev_month):
+    def update_inventory(sublist, car_model, model_year, prev_month):
         if sublist[0] == inventory.columns[3]:
-            prev_month_invt = last_month_invt.loc[(last_month_invt['PRODUCT_TRIM'] == car_model) & (last_month_invt['MODEL_YEAR'] == model_year), prev_month]
+            prev_month_invt = last_month_invt.loc[
+                (last_month_invt['PRODUCT_TRIM'] == car_model) & (last_month_invt['MODEL_YEAR'] == model_year),
+                prev_month
+            ]
         else:
-            prev_month_invt = inventory.loc[(inventory['PRODUCT_TRIM'] == car_model) & (inventory['MODEL_YEAR'] == model_year), prev_month]
+            prev_month_invt = inventory.loc[
+                (inventory['PRODUCT_TRIM'] == car_model) & (inventory['MODEL_YEAR'] == model_year),
+                prev_month
+            ]
         i = 0
         for month in sublist:
-            if i>=1:
-                prev_month = sublist[i-1]
+            if i >= 1:
+                prev_month = sublist[i - 1]
             if prev_month not in inventory.columns:
-                prev_month_invt = last_month_invt.loc[(last_month_invt['PRODUCT_TRIM'] == car_model) & (last_month_invt['MODEL_YEAR'] == model_year), prev_month]
+                prev_month_invt = last_month_invt.loc[
+                    (last_month_invt['PRODUCT_TRIM'] == car_model) & (last_month_invt['MODEL_YEAR'] == model_year),
+                    prev_month
+                ]
             else:
-                prev_month_invt = inventory.loc[(inventory['PRODUCT_TRIM'] == car_model) & (inventory['MODEL_YEAR'] == model_year), prev_month]
-            i+=1
-            inventory.loc[(inventory['PRODUCT_TRIM'] == car_model) & (inventory['MODEL_YEAR'] == model_year), month] = \
-                prev_month_invt + \
-                production.loc[(production['PRODUCT_TRIM'] == car_model) & (production['MODEL_YEAR'] == model_year), month] - \
-                sales.loc[(sales['PRODUCT_TRIM'] == car_model) & (sales['MODEL_YEAR'] == model_year), month]
+                prev_month_invt = inventory.loc[
+                    (inventory['PRODUCT_TRIM'] == car_model) & (inventory['MODEL_YEAR'] == model_year),
+                    prev_month
+                ]
+            i += 1
+            inventory.loc[
+                (inventory['PRODUCT_TRIM'] == car_model) & (inventory['MODEL_YEAR'] == model_year), month
+            ] = (
+                prev_month_invt
+                + production.loc[
+                    (production['PRODUCT_TRIM'] == car_model) & (production['MODEL_YEAR'] == model_year), month
+                ]
+                - sales.loc[
+                    (sales['PRODUCT_TRIM'] == car_model) & (sales['MODEL_YEAR'] == model_year), month
+                ]
+            )
 
     def update_value_pull(pull_value, car_model, add_month, sub_month, model_year):
         def update_data(df, model_col, year_col):
@@ -104,8 +123,7 @@ def ConstrainedPlan(req_prod,capacity,production,inventory,sales,dos,pullin_desi
 
     def generate_month_list(year):
         months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
-        month_list = [f"{month} {year}" for month in months]
-        return month_list
+        return [f"{month} {year}" for month in months]
 
     def next_two_months(month_list):
         months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
@@ -122,18 +140,15 @@ def ConstrainedPlan(req_prod,capacity,production,inventory,sales,dos,pullin_desi
 
     def find_common_elements_ordered(list1, list2):
         set_list2 = set(list2)
-        common_elements = [item for item in list1 if item in set_list2]
-        return common_elements
+        return [item for item in list1 if item in set_list2]
 
     def extract_years(month_year_list):
         years = set()
         for item in month_year_list:
-            year = item.split()[1]
-            years.add(year)
+            years.add(item.split()[1])
         return list(years)
 
-    years_present = extract_years(all_keys)
-    years_present = sorted(years_present)
+    years_present = sorted(extract_years(all_keys))
     for year_num in years_present:
         yr_month_list = generate_month_list(year_num)
         actual_data_present = find_common_elements_ordered(yr_month_list, all_keys)
@@ -150,68 +165,30 @@ def ConstrainedPlan(req_prod,capacity,production,inventory,sales,dos,pullin_desi
         data = {key: all_data[key] for key in actual_data_present if key in all_data}
         keys = list(data.keys())
 
-        inv_next_two_month = next_two_months(actual_data_present)
-        special_inv_month_key = actual_data_present+inv_next_two_month
-
-        # 1st Surplus iteration (placeholder)
+        # 1st Surplus iteration (placeholder loop scaffold retained)
         for i, month in enumerate(keys):
             surplus = data[month]
-            curr_month_num = i
-            curr_month = keys[curr_month_num]
             if keys[i] == list(all_data.keys())[-1]:
                 break
-            if surplus>0:
-                if ('Dec' in keys[curr_month_num]) :
-                    break
-                while surplus > 0:
-                    break
+            if surplus > 0 and ('Dec' in keys[i]):
+                break
 
-        # 2nd Deficit iteration (placeholder core structure)
+        # 2nd Deficit iteration (placeholder loop scaffold retained)
         for i, month in enumerate(keys):
             if i + 1 >= len(keys):
                 break
             try:
                 deficit = data[month]
-                curr_month_num = i
-                curr_month = keys[curr_month_num]
                 if keys[i] == list(all_data.keys())[-1]:
                     break
-                if curr_month == list(all_data.keys())[-1]:
+                if deficit < 0 and ('Dec' in keys[i]):
                     break
-                if deficit<0:
-                    if ('Dec' in keys[curr_month_num]):
-                        break
-                    while deficit < 0:
-                        if i + 1 >= len(keys):
-                            break
-                        if ('Dec' in keys[i]) :
-                            break
-                        next_month = keys[i + 1]
-                        for car_model in pushout_desired_order:
-                            model_rows = production[production["PRODUCT_TRIM"] == car_model].sort_values(by="MODEL_YEAR")
-                            floor_doh = doh_floor_ceil_df1[doh_floor_ceil_df1["dd_Trim"] == car_model]["amt_Floor_DOS"].values[0]
-                            ceil_doh = doh_floor_ceil_df1[doh_floor_ceil_df1["dd_Trim"] == car_model]["amt_Ceiling_DOS"].values[0]
-                            for idx, row in model_rows.iterrows():
-                                abs_deficit = abs(deficit)
-                                # (logic omitted)
-                                if deficit >= 0:
-                                    break
-                            if deficit >= 0:
-                                break
-                        if deficit < 0:
-                            pass
-                        i += 1
-                        if i >= len(keys):
-                            break
-                        if 'Dec' in keys[i]:
-                            break
             except:
                 break
 
         # 3rd iteration scaffolding
         if is_final_year == 1:
-            new_traversal_data = actual_data_present_v0
-            new_traversal_data = new_traversal_data[:-2]
+            new_traversal_data = actual_data_present_v0[:-2]
             data = {key: all_data[key] for key in new_traversal_data if key in all_data}
             keys = list(data.keys())
         else:
@@ -222,53 +199,17 @@ def ConstrainedPlan(req_prod,capacity,production,inventory,sales,dos,pullin_desi
             yr_month_list_ny_2 = generate_month_list(year_num_ny_2)
             actual_data_present_ny_2 = find_common_elements_ordered(yr_month_list_ny_2, all_keys)
             if year_num_ny == int(years_present[-1]):
-                new_traversal_data = actual_data_present_v0 + actual_data_present_ny
-                new_traversal_data = new_traversal_data[:-2]
+                new_traversal_data = (actual_data_present_v0 + actual_data_present_ny)[:-2]
             else:
-                len_actual_data_present_ny_2 = len(actual_data_present_ny_2)
-                if len_actual_data_present_ny_2 >1:
+                if len(actual_data_present_ny_2) > 1:
                     new_traversal_data = actual_data_present_v0 + actual_data_present_ny
                 else:
-                    new_traversal_data = actual_data_present_v0 + actual_data_present_ny
-                    remove_month_num = 2 - len_actual_data_present_ny_2
+                    remove_month_num = 2 - len(actual_data_present_ny_2)
                     new_traversal_data = actual_data_present_v0 + actual_data_present_ny[:-remove_month_num]
 
-        if is_final_year == 0:
-            year_num_ny = int(year_num) + 1
-            yr_month_list_ny = generate_month_list(year_num_ny)
-            actual_data_present_ny = find_common_elements_ordered(yr_month_list_ny, all_keys)
-            ny_year_month = actual_data_present_ny[0]
-            traversal_last_month = new_traversal_data[-1]
-            special_inv_month_key_ny = new_traversal_data + next_two_months(new_traversal_data)
-            data = {key: all_data[key] for key in new_traversal_data if key in all_data}
-            keys = list(data.keys())
-            for i, month in enumerate(keys):
-                if i + 1 >= len(keys):
-                    break
-                surplus = data[month]
-                curr_month_num = i
-                curr_month = keys[curr_month_num]
-                if keys[i] == list(all_data.keys())[-1]:
-                    break
-                if is_final_year == 0:
-                    if (ny_year_month in keys[curr_month_num]) :
-                        break
-                if surplus>0:
-                    if is_final_year == 0:
-                        pass
-                    while surplus > 0:
-                        next_month = keys[i + 1]
-                        adjustment_made = False
-                        try:
-                            pass
-                        except:
-                            pass
+            # (Final sweep scaffold retained)
 
-                        # NOTE: the variables referenced below (car_model, adjustable_invt_floor, etc)
-                        # are placeholders from your original scaffold. Keep your domain logic here.
-                        # This return keeps function consistent for now.
-                        break
-
+    # Return original frames (domain logic placeholders in place)
     return production, inventory, dos
 
 
@@ -303,6 +244,7 @@ dos = pd.read_csv(BASE_DIR / 'dos.csv')
 pullin_desired_order = ['PURE', 'DREAM', 'TOURING', 'GT', 'GT-P', 'SAPPHIRE']
 pushout_desired_order = ['SAPPHIRE', 'GT-P', 'GT', 'TOURING', 'DREAM', 'PURE']
 
+# minor shape selections as in your original
 inventory = inventory.iloc[:, [0, 1, 2, 4]]
 capacity = capacity.iloc[:, 9:36]
 dd_Trim = ['SAPPHIRE', 'GT-P', 'GT', 'TOURING', 'DREAM', 'PURE']
@@ -319,13 +261,14 @@ doh_floor_ceil_df1 = pd.DataFrame({
 # ---------------------------
 st.set_page_config(page_title="Production Planning Dashboard", layout="wide")
 
-# Initialize state for dataset_choice & click flag
+# ----- Session state init -----
 if 'dataset_choice' not in st.session_state:
     st.session_state['dataset_choice'] = 'req_prod'
 if 'has_clicked_dataset' not in st.session_state:
     st.session_state['has_clicked_dataset'] = False
 
-dataset_choice = st.session_state.get('dataset_choice', 'req_prod')
+# Read current choice
+dataset_choice = st.session_state['dataset_choice']
 
 def get_columns_for_choice(choice):
     if choice == "req_prod":
@@ -444,7 +387,7 @@ st.sidebar.markdown("""
 
 st.sidebar.markdown('<div class="sidebar-title">⚙️ Data Frames Viewer</div>', unsafe_allow_html=True)
 
-# Dataset buttons (persist selection in session_state)
+# ---- Sidebar buttons (persist selection) ----
 with st.sidebar:
     for name, key in [
         ("Required Production", "btn_req_prod"),
@@ -458,27 +401,25 @@ with st.sidebar:
     ]:
         if st.button(name, key=key):
             st.session_state['dataset_choice'] = name
-            st.session_state['has_clicked_dataset'] = True  # mark that a user clicked a dataset
+            st.session_state['has_clicked_dataset'] = True  # flip title after first click
 
-# Read the current selection (again after possible click)
-dataset_choice = st.session_state.get('dataset_choice', 'req_prod')
+# Always read current choice after possible click
+dataset_choice = st.session_state['dataset_choice']
 
-# Helper to filter and edit any DataFrame
+# ---- Helper to filter & edit any DataFrame ----
 from streamlit import column_config
 def filter_and_edit(df, name):
     filtered_df = df
-    if filter_value:
-        if filter_column in df.columns:
-            filtered_df = df[df[filter_column].astype(str) == filter_value]
-    edited_df = st.data_editor(
+    if filter_value and (filter_column in df.columns):
+        filtered_df = df[df[filter_column].astype(str) == filter_value]
+    return st.data_editor(
         filtered_df,
         key=f"edit_{name}",
         num_rows="dynamic",
         column_config={col: column_config.Column() for col in filtered_df.columns}
     )
-    return edited_df
 
-# Show and edit the selected dataset
+# ---- Render the selected dataset ----
 if dataset_choice == "req_prod":
     req_prod = filter_and_edit(req_prod, "req_prod")
 elif dataset_choice == "capacity":
@@ -491,12 +432,15 @@ elif dataset_choice == "sales":
     sales = filter_and_edit(sales, "sales")
 elif dataset_choice == "dos":
     dos = filter_and_edit(dos, "dos")
+elif dataset_choice == "Constraint Identification":
+    st.subheader("📋 Constraint Identification")
+    st.info("This view is under development.")
 elif dataset_choice == "Unconstrained Inventory Summary":
     st.subheader("📋 Unconstrained Inventory Summary")
     if not unconstrained_inventory_df.empty:
         st.data_editor(unconstrained_inventory_df, key="edit_unconstrained_inventory", num_rows="dynamic")
     else:
-        st.info("No data available in Unconstrained Inventory Summary.")
+        st.warning("No data available in Unconstrained Inventory Summary.")
         st.write("Debug: DataFrame is empty. Check file path, sheet, or file contents.")
         st.write(f"File path: {unconstrained_inventory_path}")
         try:
@@ -505,7 +449,7 @@ elif dataset_choice == "Unconstrained Inventory Summary":
         except Exception as e:
             st.write(f"Exception when reading Excel: {e}")
 
-# After the table, show the results if the button was clicked
+# ---- Show results after running Constrained Plan ----
 if run_balance_result is not None:
     production_out, inventory_out, dos_out = run_balance_result
     st.subheader("📦 Updated Production")
@@ -516,4 +460,3 @@ if run_balance_result is not None:
 
     st.subheader("📈 Updated DOS")
     st.data_editor(dos_out, key="edit_dos_out", num_rows="dynamic")
-
