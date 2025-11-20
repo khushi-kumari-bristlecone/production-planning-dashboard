@@ -647,6 +647,7 @@ if run_balance_clicked:
     run_balance_result = (production_out, inventory_out, dos_out)
 
 # Sidebar: Data Frames Viewer header
+# Sidebar: Data Frames Viewer header
 st.sidebar.markdown("""
     <style>
     /* Sidebar background and padding */
@@ -654,6 +655,7 @@ st.sidebar.markdown("""
         background-color: #23272f;
         padding: 1.5rem 1rem 1.5rem 1rem;
     }
+
     /* Sidebar header */
     .sidebar-title {
         font-size: 1.3rem;
@@ -662,39 +664,60 @@ st.sidebar.markdown("""
         margin-bottom: 1.2rem;
         letter-spacing: 0.5px;
     }
+
+    /* Container to stack buttons with uniform spacing */
+    .sidebar-list {
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem; /* uniform spacing between all buttons */
+        width: 100%;
+    }
+
+    /* Button wrapper - keeps full width */
+    .sidebar-btn {
+        width: 100%;
+    }
+
     /* Sidebar buttons */
     .sidebar-btn button {
         width: 100%;
         min-width: 180px;
         max-width: 100%;
+
+        /* Force uniform height */
+        height: 44px;            /* fixed height */
         min-height: 44px;
         max-height: 44px;
-        margin-bottom: 0.5rem;
+
+        /* Visuals */
         background: linear-gradient(90deg, #3a3f4b 0%, #23272f 100%);
         color: #f3f6fa;
         border: 1.5px solid #6c6f7a;
         border-radius: 10px;
         font-size: 1.08rem;
         font-weight: 600;
-        transition: background 0.2s, color 0.2s, border 0.2s;
+        transition: background 0.2s, color 0.2s, border 0.2s, box-shadow 0.2s;
         box-shadow: 0 2px 8px 0 rgba(0,0,0,0.10);
-        padding: 0.5rem 0.5rem;
+        padding: 0.5rem 0.75rem;
+
+        /* Ensure left alignment & text doesn’t wrap */
         text-align: left;
         display: flex;
-        align-items: center;
+        align-items: center;      /* vertically center the single line */
         justify-content: flex-start;
+
+        white-space: nowrap;      /* no wrapping */
+        overflow: hidden;         /* clip overflow */
+        text-overflow: ellipsis;  /* show ... when long */
         letter-spacing: 0.2px;
     }
+
+    /* Hover state */
     .sidebar-btn button:hover {
         background: #444857;
         color: #ffe082;
         border: 1.5px solid #ffe082;
-    }
-    .sidebar-btn {
-        width: 100%;
-        display: flex;
-        justify-content: flex-start;
-        align-items: center;
+        box-shadow: 0 4px 10px 0 rgba(0,0,0,0.12);
     }
     </style>
     """, unsafe_allow_html=True)
@@ -703,6 +726,9 @@ st.sidebar.markdown('<div class="sidebar-title">⚙️ Data Frames Viewer</div>'
 
 # Dataset buttons (persist selection in session_state)
 with st.sidebar:
+    # Wrap all buttons into one vertical container to get uniform gap
+    st.markdown('<div class="sidebar-list">', unsafe_allow_html=True)
+
     for name, key in [
         ("req_prod", "btn_req_prod"),
         ("capacity", "btn_capacity"),
@@ -711,12 +737,14 @@ with st.sidebar:
         ("sales", "btn_sales"),
         ("dos", "btn_dos"),
         ("Constraint Identification", "btn_constraint"),
-        ("Unconstrained Inventory Summary", "btn_unconstrained_inventory")
+        ("Unconstrained Inventory Summary", "btn_unconstrained_inventory"),
     ]:
         st.markdown('<div class="sidebar-btn">', unsafe_allow_html=True)
         if st.button(name, key=key):
             st.session_state['dataset_choice'] = name
         st.markdown('</div>', unsafe_allow_html=True)
+
+
 
 # Read the current selection
 dataset_choice = st.session_state.get('dataset_choice', 'req_prod')
