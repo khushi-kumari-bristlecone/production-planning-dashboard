@@ -621,7 +621,9 @@ def get_columns_for_choice(choice):
     else:
         return []
 
-# Move Filter value and Filter column to the top of the page, side by side
+st.title("📊 Production Planning Dashboard")
+
+# Move Filter value and Filter column below the title, side by side
 col1, col2 = st.columns([1, 2])
 with col1:
     filter_column = st.selectbox(
@@ -631,8 +633,6 @@ with col1:
     )
 with col2:
     filter_value = st.text_input("Filter value (exact match):", "", key="top_filter_value")
-
-st.title("📊 Production Planning Dashboard")
 
 # Move Run Balance Plan button to the top
 run_balance_clicked = st.button("⚖️ Run Balance Plan", key="run_balance_top")
@@ -665,17 +665,24 @@ st.sidebar.markdown("""
     /* Sidebar buttons */
     .sidebar-btn button {
         width: 100%;
-        margin-bottom: 0.18rem;
+        min-width: 160px;
+        max-width: 100%;
+        min-height: 44px;
+        max-height: 44px;
+        margin-bottom: 0.5rem;
         background: linear-gradient(90deg, #3a3f4b 0%, #23272f 100%);
         color: #f3f6fa;
         border: 1px solid #444857;
         border-radius: 8px;
-        font-size: 1.05rem;
+        font-size: 1.08rem;
         font-weight: 500;
         transition: background 0.2s, color 0.2s;
         box-shadow: 0 1px 4px 0 rgba(0,0,0,0.08);
-        padding-top: 0.45rem;
-        padding-bottom: 0.45rem;
+        padding: 0.5rem 0.5rem;
+        text-align: left;
+        display: flex;
+        align-items: center;
+        justify-content: flex-start;
     }
     .sidebar-btn button:hover {
         background: #444857;
