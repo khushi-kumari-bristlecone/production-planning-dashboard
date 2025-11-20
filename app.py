@@ -702,9 +702,18 @@ elif dataset_choice == "dos":
 elif dataset_choice == "Unconstrained Inventory Summary":
     st.subheader("📋 Unconstrained Inventory Summary")
     if not unconstrained_inventory_df.empty:
+        st.write(f"Shape: {unconstrained_inventory_df.shape}")
+        st.write(f"Columns: {list(unconstrained_inventory_df.columns)}")
         st.data_editor(unconstrained_inventory_df, key="edit_unconstrained_inventory", num_rows="dynamic")
     else:
         st.info("No data available in Unconstrained Inventory Summary.")
+        st.write("Debug: DataFrame is empty. Check file path, sheet, or file contents.")
+        st.write(f"File path: {unconstrained_inventory_path}")
+        try:
+            test_df = pd.read_excel(unconstrained_inventory_path)
+            st.write(f"Test read shape: {test_df.shape}")
+        except Exception as e:
+            st.write(f"Exception when reading Excel: {e}")
 
 # After the table, show the results if the button was clicked
 if run_balance_result is not None:
