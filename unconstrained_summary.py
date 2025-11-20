@@ -8,13 +8,15 @@ def display_unconstrained_summary(df):
     Each region is expandable/collapsible showing its delivery, production plan, and inventory data.
     """
     if df.empty:
-        st.warning("No unconstrained summary data available.")
+        st.warning("No unconstrained summary data available. Please ensure the Excel file is uploaded to the repository.")
         return
 
     # Check if Region column exists
     if 'Region' not in df.columns:
-        st.error("Region column not found in data.")
-        st.dataframe(df, use_container_width=True, hide_index=True)
+        st.error("Region column not found in data. The data structure may be incorrect.")
+        st.info("Expected columns should include 'Region' and monthly data columns.")
+        if not df.empty:
+            st.dataframe(df, use_container_width=True, hide_index=True)
         return
 
     # Add filters at the top
