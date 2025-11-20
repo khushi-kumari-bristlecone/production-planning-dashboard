@@ -665,28 +665,36 @@ st.sidebar.markdown("""
     /* Sidebar buttons */
     .sidebar-btn button {
         width: 100%;
-        min-width: 160px;
+        min-width: 180px;
         max-width: 100%;
         min-height: 44px;
         max-height: 44px;
         margin-bottom: 0.5rem;
         background: linear-gradient(90deg, #3a3f4b 0%, #23272f 100%);
         color: #f3f6fa;
-        border: 1px solid #444857;
-        border-radius: 8px;
+        border: 1.5px solid #6c6f7a;
+        border-radius: 10px;
         font-size: 1.08rem;
-        font-weight: 500;
-        transition: background 0.2s, color 0.2s;
-        box-shadow: 0 1px 4px 0 rgba(0,0,0,0.08);
+        font-weight: 600;
+        transition: background 0.2s, color 0.2s, border 0.2s;
+        box-shadow: 0 2px 8px 0 rgba(0,0,0,0.10);
         padding: 0.5rem 0.5rem;
         text-align: left;
         display: flex;
         align-items: center;
         justify-content: flex-start;
+        letter-spacing: 0.2px;
     }
     .sidebar-btn button:hover {
         background: #444857;
         color: #ffe082;
+        border: 1.5px solid #ffe082;
+    }
+    .sidebar-btn {
+        width: 100%;
+        display: flex;
+        justify-content: flex-start;
+        align-items: center;
     }
     </style>
     """, unsafe_allow_html=True)
