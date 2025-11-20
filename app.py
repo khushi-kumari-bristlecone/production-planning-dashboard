@@ -564,6 +564,13 @@ import math
 # -----------------------------
 BASE_DIR = Path(__file__).parent
 
+# Load the Unconstrained Inventory Summary Excel file (before UI code)
+unconstrained_inventory_path = BASE_DIR / 'Discovery_Unconstrained_Sales Inventory Summary_2025-11-20-11-37-09.xlsx'
+try:
+    unconstrained_inventory_df = pd.read_excel(unconstrained_inventory_path)
+except Exception as e:
+    unconstrained_inventory_df = pd.DataFrame()
+
 req_prod = pd.read_csv(BASE_DIR / 'req_prod.csv')
 capacity = pd.read_csv(BASE_DIR / 'capacity.csv')
 capacity.columns = [col.replace('.1', '') for col in capacity.columns]
@@ -632,6 +639,9 @@ if st.sidebar.button("dos", key="btn_dos"):
 # New option
 if st.sidebar.button("Constraint Identification", key="btn_constraint"):
     st.session_state['dataset_choice'] = 'Constraint Identification'
+# Add sidebar button for Unconstrained Inventory Summary
+if st.sidebar.button("Unconstrained Inventory Summary", key="btn_unconstrained_inventory"):
+    st.session_state['dataset_choice'] = 'Unconstrained Inventory Summary'
 
 # Read the current selection
 dataset_choice = st.session_state.get('dataset_choice', 'req_prod')
@@ -689,6 +699,12 @@ elif dataset_choice == "sales":
     sales = filter_and_edit(sales, "sales")
 elif dataset_choice == "dos":
     dos = filter_and_edit(dos, "dos")
+elif dataset_choice == "Unconstrained Inventory Summary":
+    st.subheader("📋 Unconstrained Inventory Summary")
+    if not unconstrained_inventory_df.empty:
+        st.data_editor(unconstrained_inventory_df, key="edit_unconstrained_inventory", num_rows="dynamic")
+    else:
+        st.info("No data available in Unconstrained Inventory Summary.")
 
 # After the table, show the results if the button was clicked
 if run_balance_result is not None:
