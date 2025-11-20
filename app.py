@@ -325,9 +325,10 @@ capacity = capacity.iloc[:, 9:36]
 unconstrained_inventory_path = BASE_DIR / 'Discovery_Unconstrained_Sales Inventory Summary_2025-11-20-11-37-09.xlsx'
 try:
     unconstrained_inventory_df = load_excel(unconstrained_inventory_path)
-    # Forward fill the Region column to handle merged cells in Excel
+    # Handle merged cells in Excel - NaN in Region column should be "NA"
     if 'Region' in unconstrained_inventory_df.columns:
-        unconstrained_inventory_df['Region'] = unconstrained_inventory_df['Region'].fillna(method='ffill')
+        # First, fill NaN with "NA" for the first region group
+        unconstrained_inventory_df['Region'] = unconstrained_inventory_df['Region'].fillna('NA')
 except Exception:
     unconstrained_inventory_df = pd.DataFrame()
 
