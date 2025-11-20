@@ -724,6 +724,13 @@ st.sidebar.markdown("""
 
 st.sidebar.markdown('<div class="sidebar-title">⚙️ Data Frames Viewer</div>', unsafe_allow_html=True)
 
+st.sidebar-btn button {
+    height: 60px;
+    white-space: normal;   /* allow wrap */
+    line-height: 1.2;      /* tighter lines for two-line labels */
+    align-items: flex-start; /* vertically align text to top for multi-line */
+}
+
 # Dataset buttons (persist selection in session_state)
 with st.sidebar:
     # Wrap all buttons into one vertical container to get uniform gap
@@ -807,4 +814,5 @@ if run_balance_result is not None:
 
     st.subheader("📈 Updated DOS")
     st.data_editor(dos_out, key="edit_dos_out", num_rows="dynamic")
+
 
