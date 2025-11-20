@@ -447,12 +447,12 @@ st.sidebar.markdown('<div class="sidebar-title">⚙️ Data Frames Viewer</div>'
 # Dataset buttons (persist selection in session_state)
 with st.sidebar:
     for name, key in [
-        ("req_prod", "btn_req_prod"),
-        ("capacity", "btn_capacity"),
-        ("production", "btn_production"),
-        ("inventory", "btn_inventory"),
-        ("sales", "btn_sales"),
-        ("dos", "btn_dos"),
+        ("Required Production", "btn_req_prod"),
+        ("Capacity", "btn_capacity"),
+        ("Production", "btn_production"),
+        ("Inventory", "btn_inventory"),
+        ("Sales", "btn_sales"),
+        ("DOS", "btn_dos"),
         ("Constraint Identification", "btn_constraint"),
         ("Unconstrained Inventory Summary", "btn_unconstrained_inventory"),
     ]:
@@ -516,3 +516,4 @@ if run_balance_result is not None:
 
     st.subheader("📈 Updated DOS")
     st.data_editor(dos_out, key="edit_dos_out", num_rows="dynamic")
+
