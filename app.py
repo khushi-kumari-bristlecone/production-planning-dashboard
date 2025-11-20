@@ -591,6 +591,10 @@ doh_floor_ceil_df1 = pd.DataFrame({
 # Streamlit UI
 # -----------------------------
 st.set_page_config(page_title="Production Planning Dashboard", layout="wide")
+
+# Move Filter value above the heading as requested
+filter_value = st.text_input("Filter value (exact match):", "", key="global_filter_value")
+
 st.title("📊 Production Planning Dashboard")
 
 # Move Run Balance Plan button to the top
@@ -605,13 +609,34 @@ if run_balance_clicked:
     st.success("✅ Constrained Plan executed successfully!")
     run_balance_result = (production_out, inventory_out, dos_out)
 
+# Sidebar: Data Frames Viewer header
 st.sidebar.header("⚙️ Data Frames Viewer")
-dataset_choice = st.sidebar.selectbox(
-    "Select a dataset to view:",
-    ["req_prod", "capacity", "production", "inventory", "sales", "dos"]
-)
 
-# Add filter controls
+# Replace selectbox with buttons for each dataset and a new 'Constraint Identification' option
+if 'dataset_choice' not in st.session_state:
+    st.session_state['dataset_choice'] = 'req_prod'
+
+# Dataset buttons (persist selection in session_state)
+if st.sidebar.button("req_prod", key="btn_req_prod"):
+    st.session_state['dataset_choice'] = 'req_prod'
+if st.sidebar.button("capacity", key="btn_capacity"):
+    st.session_state['dataset_choice'] = 'capacity'
+if st.sidebar.button("production", key="btn_production"):
+    st.session_state['dataset_choice'] = 'production'
+if st.sidebar.button("inventory", key="btn_inventory"):
+    st.session_state['dataset_choice'] = 'inventory'
+if st.sidebar.button("sales", key="btn_sales"):
+    st.session_state['dataset_choice'] = 'sales'
+if st.sidebar.button("dos", key="btn_dos"):
+    st.session_state['dataset_choice'] = 'dos'
+# New option
+if st.sidebar.button("Constraint Identification", key="btn_constraint"):
+    st.session_state['dataset_choice'] = 'Constraint Identification'
+
+# Read the current selection
+dataset_choice = st.session_state.get('dataset_choice', 'req_prod')
+
+# Add filter column control in sidebar (keeps column selector in sidebar)
 def get_columns_for_choice(choice):
     if choice == "req_prod":
         return req_prod.columns.tolist()
@@ -676,5 +701,4 @@ if run_balance_result is not None:
 
     st.subheader("📈 Updated DOS")
     st.data_editor(dos_out, key="edit_dos_out", num_rows="dynamic")
-
 
