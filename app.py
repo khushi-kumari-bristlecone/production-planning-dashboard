@@ -284,6 +284,7 @@ import streamlit as st
 from pathlib import Path
 import numpy as np
 from constraint_identification import calculate_constraint_identification, display_constraint_identification
+from unconstrained_summary import display_unconstrained_summary
 
 # 1) Page setup + state
 st.set_page_config(page_title="Production Planning Dashboard", layout="wide")
@@ -344,19 +345,19 @@ doh_floor_ceil_df1 = pd.DataFrame({
 # ---------------------------
 # Internal keys (use these throughout the logic)
 DATASETS = [
-    ("Required Production", "req_prod"),
+    ("DOS", "dos"),
     ("Capacity", "capacity"),
+    ("Sales", "sales"),
     ("Production", "production"),
     ("Inventory", "inventory"),
-    ("Sales", "sales"),
-    ("DOS", "dos"),
     ("Constraint Identification", "constraint"),
     ("Unconstrained Inventory Summary", "unconstrained_inventory"),
+    ("Projected Production", "req_prod"),
 ]
 
 # Pretty display names for the title
 DISPLAY_NAMES = {
-    "req_prod": "Required Production",
+    "req_prod": "Projected Production",
     "capacity": "Capacity",
     "production": "Production",
     "inventory": "Inventory",
@@ -433,42 +434,10 @@ with st.sidebar:
 # current internal key after click
 dataset_choice = st.session_state['dataset_choice']
 
-# 5) Dynamic title (first load vs after click)
-if st.session_state['has_clicked_dataset']:
-    st.title(f"📊 {DISPLAY_NAMES.get(dataset_choice, dataset_choice)}")
-else:
-    st.title("📊 Production Planning Dashboard")
+# 5) Dynamic title - always show the selected dataset name
+st.title(f"📊 {DISPLAY_NAMES.get(dataset_choice, dataset_choice)}")
 
-# 6) Top controls (filter options driven by internal key)
-def get_columns_for_choice(choice_key: str):
-    if choice_key == "req_prod":
-        return req_prod.columns.tolist()
-    elif choice_key == "capacity":
-        return capacity.columns.tolist()
-    elif choice_key == "production":
-        return production.columns.tolist()
-    elif choice_key == "inventory":
-        return inventory.columns.tolist()
-    elif choice_key == "sales":
-        return sales.columns.tolist()
-    elif choice_key == "dos":
-        return dos.columns.tolist()
-    elif choice_key == "unconstrained_inventory":
-        return unconstrained_inventory_df.columns.tolist()
-    else:
-        return []
-
-col1, col2 = st.columns([1, 2])
-with col1:
-    filter_column = st.selectbox(
-        "Filter column:",
-        options=get_columns_for_choice(dataset_choice),
-        key="top_filter_column"
-    )
-with col2:
-    filter_value = st.text_input("Filter value (exact match):", "", key="top_filter_value")
-
-# Run Balance Plan at top (unchanged behavior)
+# Run Balance Plan at top
 run_balance_clicked = st.button("⚖️ Run Balance Plan", key="run_balance_top")
 run_balance_result = None
 if run_balance_clicked:
@@ -480,37 +449,82 @@ if run_balance_clicked:
     st.success("✅ Constrained Plan executed successfully!")
     run_balance_result = (production_out, inventory_out, dos_out)
 
-# 7) Helper to filter & edit
-from streamlit import column_config
-def filter_and_edit(df: pd.DataFrame, name: str) -> pd.DataFrame:
-    filtered_df = df
-    if filter_value and (filter_column in df.columns):
-        filtered_df = df[df[filter_column].astype(str) == filter_value]
-    return st.data_editor(
-        filtered_df,
-        key=f"edit_{name}",
-        num_rows="dynamic",
-        column_config={col: column_config.Column() for col in filtered_df.columns}
-    )
+# 7) Helper to display collapsible data by PRODUCT_TRIM with MODEL_YEAR inside
+def display_collapsible_data(df: pd.DataFrame, name: str):
+    """Display data with collapsible PRODUCT_TRIM sections and MODEL_YEAR rows inside"""
+    if df.empty:
+        st.warning(f"No {name} data available.")
+        return
+
+    # Check if PRODUCT_TRIM column exists
+    if 'PRODUCT_TRIM' not in df.columns:
+        # Fallback to regular data editor if no PRODUCT_TRIM column
+        st.data_editor(df, key=f"edit_{name}", num_rows="dynamic")
+        return
+
+    # Initialize session state for expanded trims (default: all expanded)
+    if f'expanded_{name}' not in st.session_state:
+        st.session_state[f'expanded_{name}'] = set(df['PRODUCT_TRIM'].dropna().unique())
+
+    # Get unique product trims
+    trims = df['PRODUCT_TRIM'].dropna().unique()
+
+    # Display each trim with collapsible sections
+    for trim in sorted(trims):
+        trim_data = df[df['PRODUCT_TRIM'] == trim].copy()
+
+        # Check if trim is expanded
+        is_expanded = trim in st.session_state[f'expanded_{name}']
+
+        # Create trim header with toggle button
+        cols = st.columns([0.05, 0.95])
+
+        with cols[0]:
+            if st.button("▼" if is_expanded else "▶", key=f"toggle_{name}_{trim}", help=f"Expand/Collapse {trim}"):
+                if is_expanded:
+                    st.session_state[f'expanded_{name}'].discard(trim)
+                else:
+                    st.session_state[f'expanded_{name}'].add(trim)
+                st.rerun()
+
+        with cols[1]:
+            st.markdown(f"**{trim}**")
+
+        # Show trim data if expanded
+        if is_expanded:
+            # Remove PRODUCT_TRIM column from display
+            display_data = trim_data.drop('PRODUCT_TRIM', axis=1).copy()
+
+            # Display the data table for this trim
+            st.dataframe(
+                display_data,
+                use_container_width=True,
+                hide_index=True,
+                height=min(len(display_data) * 35 + 38, 300)
+            )
+
+        # Add separator between trims
+        st.markdown("---")
 
 # 8) Render the selected dataset (internal keys drive the branches)
 if dataset_choice == "req_prod":
-    req_prod = filter_and_edit(req_prod, "req_prod")
+    display_collapsible_data(req_prod, "req_prod")
 
 elif dataset_choice == "capacity":
-    capacity = filter_and_edit(capacity, "capacity")
+    # Capacity doesn't have PRODUCT_TRIM, display as-is
+    st.dataframe(capacity, use_container_width=True, hide_index=True)
 
 elif dataset_choice == "production":
-    production = filter_and_edit(production, "production")
+    display_collapsible_data(production, "production")
 
 elif dataset_choice == "inventory":
-    inventory = filter_and_edit(inventory, "inventory")
+    display_collapsible_data(inventory, "inventory")
 
 elif dataset_choice == "sales":
-    sales = filter_and_edit(sales, "sales")
+    display_collapsible_data(sales, "sales")
 
 elif dataset_choice == "dos":
-    dos = filter_and_edit(dos, "dos")
+    display_collapsible_data(dos, "dos")
 
 elif dataset_choice == "constraint":
     # Calculate and display constraint identification
@@ -518,18 +532,8 @@ elif dataset_choice == "constraint":
     display_constraint_identification(constraint_df)
 
 elif dataset_choice == "unconstrained_inventory":
-    st.subheader("📋 Unconstrained Inventory Summary")
-    if not unconstrained_inventory_df.empty:
-        st.data_editor(unconstrained_inventory_df, key="edit_unconstrained_inventory", num_rows="dynamic")
-    else:
-        st.warning("No data available in Unconstrained Inventory Summary.")
-        st.write("Debug: DataFrame is empty. Check file path, sheet, or file contents.")
-        st.write(f"File path: {unconstrained_inventory_path}")
-        try:
-            test_df = load_excel(unconstrained_inventory_path)
-            st.write(f"Test read shape: {test_df.shape}")
-        except Exception as e:
-            st.write(f"Exception when reading Excel: {e}")
+    # Display unconstrained summary with collapsible regions
+    display_unconstrained_summary(unconstrained_inventory_df)
 
 # 9) Results after plan run (unchanged)
 if run_balance_result is not None:
