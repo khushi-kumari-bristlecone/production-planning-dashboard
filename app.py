@@ -283,6 +283,7 @@ def ConstrainedPlan(req_prod, capacity, production, inventory, sales, dos,
 import streamlit as st
 from pathlib import Path
 import numpy as np
+from constraint_identification import calculate_constraint_identification, display_constraint_identification
 
 # 1) Page setup + state
 st.set_page_config(page_title="Production Planning Dashboard", layout="wide")
@@ -512,8 +513,9 @@ elif dataset_choice == "dos":
     dos = filter_and_edit(dos, "dos")
 
 elif dataset_choice == "constraint":
-    st.subheader("📋 Constraint Identification")
-    st.info("This view is under development.")
+    # Calculate and display constraint identification
+    constraint_df = calculate_constraint_identification(req_prod, capacity)
+    display_constraint_identification(constraint_df)
 
 elif dataset_choice == "unconstrained_inventory":
     st.subheader("📋 Unconstrained Inventory Summary")
