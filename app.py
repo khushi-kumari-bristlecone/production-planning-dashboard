@@ -351,47 +351,47 @@ DATASETS = [
     ("Production", "production"),
     ("Inventory", "inventory"),
     ("Constraint Identification", "constraint"),
-    ("Unconstrained Inventory Summary", "unconstrained_inventory"),
-    ("Projected Production", "req_prod"),
+    ("Unconstrained Plan Summary", "unconstrained_inventory"),
+    ("Projected Production Plan", "req_prod"),
 ]
 
 # Pretty display names for the title
 DISPLAY_NAMES = {
-    "req_prod": "Projected Production",
+    "req_prod": "Projected Production Plan",
     "capacity": "Capacity",
     "production": "Production",
     "inventory": "Inventory",
     "sales": "Sales",
     "dos": "DOS",
     "constraint": "Constraint Identification",
-    "unconstrained_inventory": "Unconstrained Inventory Summary",
+    "unconstrained_inventory": "Unconstrained Plan Summary",
 }
 
 # 4) Sidebar first: robust CSS + buttons (so state updates precede rendering)
 st.sidebar.markdown("""
     <style>
     [data-testid="stSidebar"] {
-        background-color: #23272f !important;
-        padding: 1.5rem 1rem !important;
-    }
-    .sidebar-title {
-        font-size: 1.3rem;
-        font-weight: 700;
-        color: #f3f6fa;
-        margin-bottom: 1.2rem;
-        letter-spacing: 0.5px;
+        background: #1e1e1e !important;
+        padding: 0 !important;
+        border-right: 1px solid #2d2d2d !important;
     }
     [data-testid="stSidebar"] .stButton {
         width: 100% !important;
-        margin-bottom: 0.75rem !important;
+        margin: 0 !important;
+        padding: 0 !important;
     }
     [data-testid="stSidebar"] .stButton > button,
     [data-testid="stSidebar"] [data-testid="baseButton-primary"],
     [data-testid="stSidebar"] [data-testid="baseButton-secondary"] {
         width: 100% !important;
-        min-width: 180px !important;
-        height: 44px !important;
-        padding: 8px 12px !important;
+        max-width: 100% !important;
+        min-width: 100% !important;
+        height: 40px !important;
+        min-height: 40px !important;
+        max-height: 40px !important;
+        padding: 0 20px !important;
+        margin: 0 !important;
+        box-sizing: border-box !important;
 
         text-align: left !important;
         display: flex !important;
@@ -401,28 +401,32 @@ st.sidebar.markdown("""
         overflow: hidden !important;
         text-overflow: ellipsis !important;
 
-        background: linear-gradient(90deg, #3a3f4b 0%, #23272f 100%) !important;
-        color: #f3f6fa !important;
-        border: 1.5px solid #6c6f7a !important;
-        border-radius: 10px !important;
-        font-size: 1.08rem !important;
-        font-weight: 600 !important;
+        background: transparent !important;
+        color: #cccccc !important;
+        border: none !important;
+        border-bottom: 1px solid #2d2d2d !important;
+        border-radius: 0 !important;
+        font-size: 0.9rem !important;
+        font-weight: 400 !important;
         letter-spacing: 0.2px !important;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.10) !important;
-        transition: background 0.2s, color 0.2s, border 0.2s, box-shadow 0.2s !important;
+        box-shadow: none !important;
+        transition: all 0.2s ease !important;
     }
     [data-testid="stSidebar"] .stButton > button:hover,
     [data-testid="stSidebar"] [data-testid="baseButton-primary"]:hover,
     [data-testid="stSidebar"] [data-testid="baseButton-secondary"]:hover {
-        background: #444857 !important;
-        color: #ffe082 !important;
-        border: 1.5px solid #ffe082 !important;
-        box-shadow: 0 4px 10px rgba(0,0,0,0.12) !important;
+        background: #2d2d2d !important;
+        color: #ffffff !important;
+        border-bottom: 1px solid #2d2d2d !important;
+        box-shadow: none !important;
+        transform: none !important;
+    }
+    [data-testid="stSidebar"] .stButton > button:active {
+        background: #3d3d3d !important;
+        transform: none !important;
     }
     </style>
 """, unsafe_allow_html=True)
-
-st.sidebar.markdown('<div class="sidebar-title">⚙️ Data Frames Viewer</div>', unsafe_allow_html=True)
 
 with st.sidebar:
     for label, key in DATASETS:
@@ -437,6 +441,81 @@ dataset_choice = st.session_state['dataset_choice']
 # 5) Dynamic title - always show the selected dataset name
 st.title(f"📊 {DISPLAY_NAMES.get(dataset_choice, dataset_choice)}")
 
+# 6) Add filters based on dataset type
+def display_filters(df, dataset_key):
+    """Display relevant filters for each dataset"""
+    col1, col2, col3, col4, col5 = st.columns(5)
+
+    filters = {}
+
+    with col1:
+        if 'PRODUCT_TRIM' in df.columns:
+            product_region = st.multiselect(
+                "Product Region",
+                ["NA", "EU", "ME", "APAC"],
+                default=[],
+                key=f"filter_region_{dataset_key}"
+            )
+            filters['Product Region'] = product_region
+        else:
+            st.multiselect("Product Region", [], key=f"filter_region_{dataset_key}", disabled=True)
+
+    with col2:
+        if 'PRODUCT_TRIM' in df.columns:
+            trims = sorted(df['PRODUCT_TRIM'].dropna().unique().tolist())
+            model = st.multiselect("Model", trims, default=[], key=f"filter_model_{dataset_key}")
+            filters['Model'] = model
+        else:
+            st.multiselect("Model", [], key=f"filter_model_{dataset_key}", disabled=True)
+
+    with col3:
+        product_country = st.multiselect(
+            "Product Country",
+            ["USA", "Canada", "Germany", "UK"],
+            default=[],
+            key=f"filter_country_{dataset_key}"
+        )
+        filters['Product Country'] = product_country
+
+    with col4:
+        build_type = st.multiselect(
+            "Build Type",
+            ["Standard", "Custom", "Pre-Production"],
+            default=[],
+            key=f"filter_build_{dataset_key}"
+        )
+        filters['Build Type'] = build_type
+
+    with col5:
+        if 'MODEL_YEAR' in df.columns:
+            years = sorted(df['MODEL_YEAR'].dropna().unique().tolist())
+            model_year = st.multiselect("Model Year", years, default=[], key=f"filter_year_{dataset_key}")
+            filters['Model Year'] = model_year
+        else:
+            st.multiselect("Model Year", [], key=f"filter_year_{dataset_key}", disabled=True)
+
+    return filters
+
+# Display filters for all datasets except constraint and unconstrained
+if dataset_choice not in ["constraint", "unconstrained_inventory"]:
+    # Get the appropriate dataframe for filters
+    filter_df = None
+    if dataset_choice == "req_prod":
+        filter_df = req_prod
+    elif dataset_choice == "capacity":
+        filter_df = capacity
+    elif dataset_choice == "production":
+        filter_df = production
+    elif dataset_choice == "inventory":
+        filter_df = inventory
+    elif dataset_choice == "sales":
+        filter_df = sales
+    elif dataset_choice == "dos":
+        filter_df = dos
+
+    if filter_df is not None:
+        current_filters = display_filters(filter_df, dataset_choice)
+
 # Run Balance Plan at top
 run_balance_clicked = st.button("⚖️ Run Balance Plan", key="run_balance_top")
 run_balance_result = None
@@ -450,28 +529,36 @@ if run_balance_clicked:
     run_balance_result = (production_out, inventory_out, dos_out)
 
 # 7) Helper to display collapsible data by PRODUCT_TRIM with MODEL_YEAR inside
-def display_collapsible_data(df: pd.DataFrame, name: str):
+def display_collapsible_data(df: pd.DataFrame, name: str, filters: dict = None):
     """Display data with collapsible PRODUCT_TRIM sections and MODEL_YEAR rows inside"""
     if df.empty:
         st.warning(f"No {name} data available.")
         return
 
+    # Apply filters if provided
+    filtered_df = df.copy()
+    if filters:
+        if filters.get('Model') and len(filters['Model']) > 0 and 'PRODUCT_TRIM' in filtered_df.columns:
+            filtered_df = filtered_df[filtered_df['PRODUCT_TRIM'].isin(filters['Model'])]
+        if filters.get('Model Year') and len(filters['Model Year']) > 0 and 'MODEL_YEAR' in filtered_df.columns:
+            filtered_df = filtered_df[filtered_df['MODEL_YEAR'].isin(filters['Model Year'])]
+
     # Check if PRODUCT_TRIM column exists
-    if 'PRODUCT_TRIM' not in df.columns:
+    if 'PRODUCT_TRIM' not in filtered_df.columns:
         # Fallback to regular data editor if no PRODUCT_TRIM column
-        st.data_editor(df, key=f"edit_{name}", num_rows="dynamic")
+        st.data_editor(filtered_df, key=f"edit_{name}", num_rows="dynamic")
         return
 
     # Initialize session state for expanded trims (default: all expanded)
     if f'expanded_{name}' not in st.session_state:
-        st.session_state[f'expanded_{name}'] = set(df['PRODUCT_TRIM'].dropna().unique())
+        st.session_state[f'expanded_{name}'] = set(filtered_df['PRODUCT_TRIM'].dropna().unique())
 
     # Get unique product trims
-    trims = df['PRODUCT_TRIM'].dropna().unique()
+    trims = filtered_df['PRODUCT_TRIM'].dropna().unique()
 
     # Display each trim with collapsible sections
     for trim in sorted(trims):
-        trim_data = df[df['PRODUCT_TRIM'] == trim].copy()
+        trim_data = filtered_df[filtered_df['PRODUCT_TRIM'] == trim].copy()
 
         # Check if trim is expanded
         is_expanded = trim in st.session_state[f'expanded_{name}']
@@ -508,23 +595,23 @@ def display_collapsible_data(df: pd.DataFrame, name: str):
 
 # 8) Render the selected dataset (internal keys drive the branches)
 if dataset_choice == "req_prod":
-    display_collapsible_data(req_prod, "req_prod")
+    display_collapsible_data(req_prod, "req_prod", current_filters if 'current_filters' in locals() else None)
 
 elif dataset_choice == "capacity":
     # Capacity doesn't have PRODUCT_TRIM, display as-is
     st.dataframe(capacity, use_container_width=True, hide_index=True)
 
 elif dataset_choice == "production":
-    display_collapsible_data(production, "production")
+    display_collapsible_data(production, "production", current_filters if 'current_filters' in locals() else None)
 
 elif dataset_choice == "inventory":
-    display_collapsible_data(inventory, "inventory")
+    display_collapsible_data(inventory, "inventory", current_filters if 'current_filters' in locals() else None)
 
 elif dataset_choice == "sales":
-    display_collapsible_data(sales, "sales")
+    display_collapsible_data(sales, "sales", current_filters if 'current_filters' in locals() else None)
 
 elif dataset_choice == "dos":
-    display_collapsible_data(dos, "dos")
+    display_collapsible_data(dos, "dos", current_filters if 'current_filters' in locals() else None)
 
 elif dataset_choice == "constraint":
     # Calculate and display constraint identification

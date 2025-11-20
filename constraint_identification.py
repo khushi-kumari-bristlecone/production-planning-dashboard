@@ -68,23 +68,31 @@ def display_constraint_identification(constraint_df):
     """
     Display the constraint identification table with color coding and formatting.
     """
-    st.subheader("🚦 Constraint Identification")
-
     # Add refresh button
     if st.button("🔄 Refresh Constraint Identification", key="refresh_constraint"):
         st.rerun()
 
-    # Display legend
-    st.markdown("""
-    **Note:**
-    - <span style='color: #FFC107;'>**Surplus - YELLOW**</span>
-    - <span style='color: #F44336;'>**Deficit - RED**</span>
-    - <span style='color: #4CAF50;'>**Perfectly Balanced - GREEN**</span>
-    """, unsafe_allow_html=True)
-
     # Use session state to store editable data
     if 'constraint_data' not in st.session_state:
         st.session_state.constraint_data = constraint_df.copy()
+
+    # Calculate differences for KPI display
+    temp_diff = st.session_state.constraint_data['AVAILABLE_BUILD_SLOT'] - st.session_state.constraint_data['PROJECTED_PRODUCTION_PLAN']
+
+    # Display summary statistics (KPI tiles) FIRST
+    col1, col2, col3 = st.columns(3)
+
+    with col1:
+        deficit_count = len(temp_diff[temp_diff < 0])
+        st.metric("Deficit Months", deficit_count, delta=None, delta_color="inverse")
+
+    with col2:
+        surplus_count = len(temp_diff[temp_diff > 0])
+        st.metric("Surplus Months", surplus_count)
+
+    with col3:
+        balanced_count = len(temp_diff[temp_diff == 0])
+        st.metric("Balanced Months", balanced_count, delta_color="off")
 
     # Create two columns for side-by-side display
     col_edit, col_diff = st.columns([3, 1])
@@ -151,19 +159,12 @@ def display_constraint_identification(constraint_df):
     # Update the full dataframe with calculated differences
     st.session_state.constraint_data['DIFFERENCE_SLOT'] = diff_df['DIFFERENCE_SLOT']
 
-    # Display summary statistics
-    col1, col2, col3 = st.columns(3)
-
-    with col1:
-        deficit_count = len(diff_df[diff_df['DIFFERENCE_SLOT'] < 0])
-        st.metric("Deficit Months", deficit_count, delta=None, delta_color="inverse")
-
-    with col2:
-        surplus_count = len(diff_df[diff_df['DIFFERENCE_SLOT'] > 0])
-        st.metric("Surplus Months", surplus_count)
-
-    with col3:
-        balanced_count = len(diff_df[diff_df['DIFFERENCE_SLOT'] == 0])
-        st.metric("Balanced Months", balanced_count, delta_color="off")
+    # Display legend below the table
+    st.markdown("""
+    **Note:**
+    - <span style='color: #FFC107;'>**Surplus - YELLOW**</span>
+    - <span style='color: #F44336;'>**Deficit - RED**</span>
+    - <span style='color: #4CAF50;'>**Perfectly Balanced - GREEN**</span>
+    """, unsafe_allow_html=True)
 
     return st.session_state.constraint_data
