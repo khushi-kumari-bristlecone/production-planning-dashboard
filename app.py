@@ -221,6 +221,7 @@ import numpy as np
 import calendar
 import math
 from constraint_identification import calculate_constraint_identification, display_constraint_identification
+from constraint_identification import calculate_constraint_identification, display_constraint_identification
 
 # ---------------------------
 # Load Input Data
@@ -436,8 +437,9 @@ elif dataset_choice == "sales":
 elif dataset_choice == "dos":
     dos = filter_and_edit(dos, "dos")
 elif dataset_choice == "Constraint Identification":
-    st.subheader("📋 Constraint Identification")
-    st.info("This view is under development.")
+    # Calculate constraint identification
+    constraint_df = calculate_constraint_identification(req_prod, capacity)
+    display_constraint_identification(constraint_df)
 elif dataset_choice == "Unconstrained Inventory Summary":
     st.subheader("📋 Unconstrained Inventory Summary")
     if not unconstrained_inventory_df.empty:
