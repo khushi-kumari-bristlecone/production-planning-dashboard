@@ -322,7 +322,7 @@ inventory = inventory.iloc[:, [0, 1, 2, 4]]
 capacity = capacity.iloc[:, 9:36]
 
 # optional Excel summary (cached)
-unconstrained_inventory_path = BASE_DIR / 'Discovery_Unconstrained_Sales Inventory Summary_2025-11-20-11-37-09.xlsx'
+unconstrained_inventory_path = BASE_DIR / 'unconstrained_data.xlsx'
 try:
     unconstrained_inventory_df = load_excel(unconstrained_inventory_path)
     # Handle merged cells in Excel - NaN in Region column should be "NA"
