@@ -13,20 +13,20 @@ warnings.filterwarnings("ignore")
 
 def ConstrainedPlan(req_prod,capacity,production,inventory,sales,dos,pullin_desired_order, pushout_desired_order,doh_floor_ceil_df1):
     print('\n Constrained Plan pullin_desired_order  ',pullin_desired_order,'and pushout_desired_order ', pushout_desired_order )
-                
+
     req_prod = req_prod.drop(req_prod.columns[3:5], axis=1)
     month_list_invt = list(capacity.columns)
     capacity = capacity.drop(capacity.columns[:2], axis=1)
     production = production.drop(production.columns[3:5], axis=1)
-    
-    
+
+
     # Corrected index 4 to 3 for initial inventory preservation
     last_month_invt = inventory.iloc[:, [0, 1, 2, 3]]
     inventory = inventory.drop(inventory.columns[3:5], axis=1)
     # Keeping the original drop logic for consistency
     sales = sales.drop(sales.columns[3:5], axis=1)
     dos = dos.drop(dos.columns[3:5], axis=1)
-    
+
     # print('DOS :', dos.columns)
     total_production = req_prod.sum(axis = 0, numeric_only = True)
     # print('total_production :', total_production)
@@ -47,15 +47,15 @@ def ConstrainedPlan(req_prod,capacity,production,inventory,sales,dos,pullin_desi
         # Parse the month and year from the input string
         month_abbr, year = month_str.split()
         year = int(year)
-        
+
         # Convert month abbreviation to month number (1 for January, 2 for February, etc.)
         month_num = list(calendar.month_abbr).index(month_abbr)
-        
+
         # Use calendar.monthrange to get the number of days
         _, num_days = calendar.monthrange(year, month_num)
-        
+
         return num_days
-    
+
     def calculate_amt_of_invt(floor_doh, sales_forecast, days_per_month):
         remaining_days = floor_doh
         amt_of_invt = 0
@@ -82,13 +82,13 @@ def ConstrainedPlan(req_prod,capacity,production,inventory,sales,dos,pullin_desi
                 total_days_of_supply += days
                 remaining_inventory -= sale
                 sale_frcst.append(sale)
-            
+
             else:
                 # Calculate partial month days if inventory is less than the sales forecast
                 partial_days = round((remaining_inventory / sale) * days,2)
                 total_days_of_supply += partial_days
                 break
-            
+
         # to handle consecative zero sales forecast entries
         if len(sale_frcst)== 2:
             if sale_frcst[0]+sale_frcst[1] == 0:
@@ -96,27 +96,27 @@ def ConstrainedPlan(req_prod,capacity,production,inventory,sales,dos,pullin_desi
         if len(sale_frcst)> 2:
             if sale_frcst[1]+sale_frcst[2] == 0:
                 total_days_of_supply = days_per_month[0] + days_per_month[1]
-            
+
         return total_days_of_supply
-    
+
     def update_inventory(sublist,car_model,model_year,prev_month):
         #if production month_beg of last month
         #sub = [mar 25, apr 25]
         if sublist[0] == inventory.columns[3]:
-            # FIX: If the month being updated is the first planning month (which is at index 3 after drops), 
+            # FIX: If the month being updated is the first planning month (which is at index 3 after drops),
             # use the last_month_invt which holds the pre-planning inventory value (index 3 from original DF).
             prev_month_invt = last_month_invt.loc[(last_month_invt['PRODUCT_TRIM'] == car_model) & (last_month_invt['MODEL_YEAR'] == model_year), prev_month]
         else:
             prev_month_invt = inventory.loc[(inventory['PRODUCT_TRIM'] == car_model) & (inventory['MODEL_YEAR'] == model_year), prev_month]
         i = 0
-        #sublist= [dec,jan,feb] 
+        #sublist= [dec,jan,feb]
         for month in sublist:
             #iteration dec: , prev month = nov, i = 0,
             #iteration 2 jan: prev month = dec, i =1
             if i>=1:
                 prev_month = sublist[i-1]
                 # Ensure we check the original inventory DF if the previous month was before the planning horizon.
-                # This complex check assumes the `prev_month` variable passed in the first iteration correctly points 
+                # This complex check assumes the `prev_month` variable passed in the first iteration correctly points
                 # to the pre-planning month column name inside `last_month_invt`.
                 if prev_month not in inventory.columns: # Check if the previous month is one of the removed columns (pre-planning)
                      # Assuming the previous month is the one saved in last_month_invt
@@ -124,13 +124,13 @@ def ConstrainedPlan(req_prod,capacity,production,inventory,sales,dos,pullin_desi
                 else:
                     prev_month_invt = inventory.loc[(inventory['PRODUCT_TRIM'] == car_model) & (inventory['MODEL_YEAR'] == model_year), prev_month]
             i+=1
-            
+
             # Apply the inventory update formula
             inventory.loc[(inventory['PRODUCT_TRIM'] == car_model) & (inventory['MODEL_YEAR'] == model_year), month] =  \
                 prev_month_invt + \
                 production.loc[(production['PRODUCT_TRIM'] == car_model) & (production['MODEL_YEAR'] == model_year), month] - \
                 sales.loc[(sales['PRODUCT_TRIM'] == car_model) & (sales['MODEL_YEAR'] == model_year), month]
-    
+
     def update_value_pull(pull_value, car_model, add_month, sub_month, model_year):
         # Define a helper function for updates to avoid redundancy
         def update_data(df, model_col, year_col):
@@ -141,7 +141,7 @@ def ConstrainedPlan(req_prod,capacity,production,inventory,sales,dos,pullin_desi
 
         # Update production data
         update_data(production, "PRODUCT_TRIM", "MODEL_YEAR")
-        
+
     def update_value_push(push_value, car_model, add_month, sub_month, model_year):
     # Define a helper function for updates to avoid redundancy
         def update_data(df, model_col, year_col):
@@ -156,7 +156,7 @@ def ConstrainedPlan(req_prod,capacity,production,inventory,sales,dos,pullin_desi
         months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
         month_list = [f"{month} {year}" for month in months]
         return month_list
-        
+
     def next_two_months(month_list):
         # Define the month names and their corresponding next months
         months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
@@ -174,14 +174,14 @@ def ConstrainedPlan(req_prod,capacity,production,inventory,sales,dos,pullin_desi
             next_months.append(f"{months[next_month_index]} {next_year}")
         # Add the new months to the original list
         return next_months
-        
+
     def find_common_elements_ordered(list1, list2):
         # Create a set from the second list for faster lookup
         set_list2 = set(list2)
         # Use a list comprehension to maintain order from list1
         common_elements = [item for item in list1 if item in set_list2]
         return common_elements
-        
+
     # just extarct what year data is present
     def extract_years(month_year_list):
         years = set()  # Use a set to avoid duplicates
@@ -190,23 +190,23 @@ def ConstrainedPlan(req_prod,capacity,production,inventory,sales,dos,pullin_desi
             year = item.split()[1]
             years.add(year)
         return list(years)
-        
+
     years_present = extract_years(all_keys)
     years_present = sorted(years_present)
     # print('years_present :', years_present)
-    
+
     for year_num in years_present:
         yr_month_list = generate_month_list(year_num)
         actual_data_present = find_common_elements_ordered(yr_month_list, all_keys)
         actual_data_present_v0 = actual_data_present
-                        
+
         # Check if the iteration is for last year
             # If yes apply following conditions for last year
                 # 1. Target and current month cannot touch last 2 months of that year : +2 months sales value reliance
                     #thus the year data itself should have more than 2 months of data for any balancing iterations
-                # 2. No 3rd iteration sweep 
+                # 2. No 3rd iteration sweep
         is_final_year = 0
-        year_num = int(year_num) 
+        year_num = int(year_num)
         # print('Last year check year_num' , year_num,type(year_num),'and int(years_present[-1])', int(years_present[-1]))
         # print('first iteration actual_data_present before condition',actual_data_present, len(actual_data_present))
         if year_num == int(years_present[-1]):
@@ -215,17 +215,17 @@ def ConstrainedPlan(req_prod,capacity,production,inventory,sales,dos,pullin_desi
             if len(actual_data_present) >= 4:
                 # print('actual data length check ')
                 actual_data_present = actual_data_present[:-2]
-                
+
             else:
                 # print('\n \n *** Last year doesn\'t have data more than 3 months , thus planning operation canot be executed ! ***')
                 break
-        
+
         # print('actual_data_present After condition',actual_data_present)
-            
+
         # create data dictionary .i.e. surplus/deficit data from orignal dictionary based on the calender year cut
         # give access to plus 2 months from end but iteration alwasy end at dec
         data = {key: all_data[key] for key in actual_data_present if key in all_data}
-        keys = list(data.keys()) 
+        keys = list(data.keys())
         # print(data)
         # extend the plus two months as special key data for inventory
         inv_next_two_month = next_two_months(actual_data_present)
@@ -236,11 +236,11 @@ def ConstrainedPlan(req_prod,capacity,production,inventory,sales,dos,pullin_desi
         # print('\n\n##################################################### 1st  Surplus iteration #########################################')
         sweep_iteration_flag = 0
         for i, month in enumerate(keys):
-        
+
             surplus = data[month]
             # defining a variable to differentiate between current and target month
             curr_month_num = i
-            curr_month = keys[curr_month_num]    
+            curr_month = keys[curr_month_num]
             if keys[i] == list(all_data.keys())[-1]:
                 # print(f"Reached end of Given production data - {keys[i]}....closing operation")
                 break
@@ -249,8 +249,8 @@ def ConstrainedPlan(req_prod,capacity,production,inventory,sales,dos,pullin_desi
                 ###### condition to stop on dec
                 if ('Dec' in keys[curr_month_num]) :
                     # print('**No pull in /push out allowed on Jan for firs two iteration...closing operation***')
-                    break        
-                        
+                    break
+
                 while surplus > 0:
                     # TODO: Implement logic to resolve surplus here
                     # For now, break to avoid infinite loop and satisfy indentation
@@ -263,7 +263,7 @@ def ConstrainedPlan(req_prod,capacity,production,inventory,sales,dos,pullin_desi
                 # print(f"Reached the last month of the current sweep: {keys[i]} - cannot check next month.")
                 break
             # END FIX 1
-            
+
             try:
                 deficit = data[month]
                 # defining a variable to differentiate between current and target month
@@ -272,7 +272,7 @@ def ConstrainedPlan(req_prod,capacity,production,inventory,sales,dos,pullin_desi
                 if keys[i] == list(all_data.keys())[-1]:
                     # print(f"Reached end of Given production data - {keys[i]}....closing operation")
                     break
-                
+
                 # if last month of given of preoduction data is reached stop
                 if curr_month == list(all_data.keys())[-1]:
                     # print(f"Reached end of Given production data - {curr_month}....closing operation")
@@ -282,24 +282,24 @@ def ConstrainedPlan(req_prod,capacity,production,inventory,sales,dos,pullin_desi
                     #######add condition to stop on dec
                     if ('Dec' in keys[curr_month_num]):
                         print('**No pull in /push out allowed on Jan for firs two iteration...closing operation***')
-                        break  
+                        break
                     while deficit < 0:
                         print("~~~~~~~~~~~~ Current values in adjust build slot ~~~~~~~~~~~~~~~~~~~~~\n",all_data)
-                        
+
                         # CRITICAL FIX 2: Check index *inside* the while loop before accessing next month
                         if i + 1 >= len(keys):
                             print("---------- Index boundary reached: Cannot access next month. Stopping deficit adjustment. ----------")
                             break
                         # END CRITICAL FIX 2
-                        
+
                         if ('Dec' in keys[i]) :
                             print("***--------Target month reached next year Jan-------saving last changes and closing operation***")
                             break
-                            
+
                         # Accessing keys[i + 1] is now safe
-                        next_month = keys[i + 1] 
+                        next_month = keys[i + 1]
                         print("--- Current target month {} ---".format(next_month))
-                        
+
                         for car_model in pushout_desired_order:
                             # Get all rows for the current car model and sort by 'MODEL_YEAR'
                             model_rows = production[production["PRODUCT_TRIM"] == car_model].sort_values(by="MODEL_YEAR")
@@ -328,7 +328,7 @@ def ConstrainedPlan(req_prod,capacity,production,inventory,sales,dos,pullin_desi
                             print("Moving to the next month")
                             i += 1
                             # CRITICAL FIX 3: Check index boundary after manual increment
-                            if i >= len(keys): 
+                            if i >= len(keys):
                                 print("---------- Index boundary reached after manual increment. Stopping deficit adjustment. ----------")
                                 break
                             # END CRITICAL FIX 3
@@ -337,23 +337,23 @@ def ConstrainedPlan(req_prod,capacity,production,inventory,sales,dos,pullin_desi
                     print(f"\n-----------------------------Operation done for {curr_month}---------------------------------------------------------------\n\n")
             except:
                 break
-        
+
         ################################################# Now 3rd iteration ############################################
         # print('\n\n################################################# Now 3rd iteration ############################################\n')
-        
-        
+
+
         # ... (Simplified Logic Block for creating new_traversal_data and keys remains the same) ...
-        
-        
+
+
         #### if Current year is final year
         if is_final_year == 1:
             # print('\n Current year is Final year in the data. Thus, Executing A Final Self Balance in 3rd iteration ')
             new_traversal_data = actual_data_present_v0
-            
+
             # dont iterate over the last 2 months of the data
-            new_traversal_data = new_traversal_data[:-2]         
+            new_traversal_data = new_traversal_data[:-2]
             data = {key: all_data[key] for key in new_traversal_data if key in all_data}
-            keys = list(data.keys()) 
+            keys = list(data.keys())
             # print(data)
         #### if Current year is NOT a final year
         else:
@@ -366,7 +366,7 @@ def ConstrainedPlan(req_prod,capacity,production,inventory,sales,dos,pullin_desi
             # get month name of final month of last year
             yr_month_list_ny_2 = generate_month_list(year_num_ny_2)
             actual_data_present_ny_2 = find_common_elements_ordered(yr_month_list_ny_2, all_keys)
-            
+
             # check if next year if final
             if year_num_ny == int(years_present[-1]):
                 # append current and next year monthlist and perfrom -2 months
@@ -375,37 +375,37 @@ def ConstrainedPlan(req_prod,capacity,production,inventory,sales,dos,pullin_desi
                 # print('\n Next year is Final year in the data. Thus, Executing 3rd iteration with considering current and next month ')
             else:
                 # this means yr_month_list_ny_2 is confirm final year as we are provided with only 27 months
-                # check does it have atleast 2 months 
+                # check does it have atleast 2 months
                 len_actual_data_present_ny_2 = len(actual_data_present_ny_2)
                 if len_actual_data_present_ny_2 >1:
                     new_traversal_data = actual_data_present_v0 + actual_data_present_ny
-                    # print('\n Next year is not Final year in the data with > 1 months data . Thus, Executing 3rd iteration with considering current and next month without reduction on month')             
+                    # print('\n Next year is not Final year in the data with > 1 months data . Thus, Executing 3rd iteration with considering current and next month without reduction on month')
                 else:
                     new_traversal_data = actual_data_present_v0 + actual_data_present_ny
                     remove_month_num = 2 - len_actual_data_present_ny_2
                     new_traversal_data = actual_data_present_v0 + actual_data_present_ny[:-remove_month_num]
-                    # print('\n Next year is not Final year in the data with < 2 months data . Thus, Executing 3rd iteration with considering current and next month with calculated reduction on month')             
-                        
-            
-        # #Get next year first month for current month iteration restriction 
+                    # print('\n Next year is not Final year in the data with < 2 months data . Thus, Executing 3rd iteration with considering current and next month with calculated reduction on month')
+
+
+        # #Get next year first month for current month iteration restriction
         if is_final_year == 0:
             year_num_ny = int(year_num) + 1
-            # get month name 
+            # get month name
             yr_month_list_ny = generate_month_list(year_num_ny)
             actual_data_present_ny = find_common_elements_ordered(yr_month_list_ny, all_keys)
             # if not actual_data_present_ny:
             #     print('No next year data present')
-            #     break           
+            #     break
             ny_year_month = actual_data_present_ny[0]
             traversal_last_month = new_traversal_data[-1]
-        # give acces to plus 2 months from end but iteration alwasy end at dec    
+        # give acces to plus 2 months from end but iteration alwasy end at dec
         special_inv_month_key_ny = new_traversal_data + next_two_months(new_traversal_data)
         data = {key: all_data[key] for key in new_traversal_data if key in all_data}
-        keys = list(data.keys()) 
+        keys = list(data.keys())
         # print(f"\n------------------------------------Data now  {data}-------------------------")
         # print(f"\n------------------------------------Performing final sweep on Year {year_num}-------------------------")
         # print(f"\n------------------------------------sweep data -{keys} -------------------------")
-        
+
         #print(f"\n------------------------------------special_inv_month_key_ny -{special_inv_month_key_ny} -------------------------")
         for i, month in enumerate(keys):
             # FIX 1: Check if next index exists before attempting to access keys[i + 1]
@@ -413,7 +413,7 @@ def ConstrainedPlan(req_prod,capacity,production,inventory,sales,dos,pullin_desi
                 # print(f"Reached the last month of the final sweep: {keys[i]} - cannot check next month.")
                 break
             # END FIX 1
-            
+
             surplus = data[month]
             # defining a variable to differentiate between current and target month
             curr_month_num = i
@@ -425,30 +425,30 @@ def ConstrainedPlan(req_prod,capacity,production,inventory,sales,dos,pullin_desi
             if is_final_year == 0:
                 if (ny_year_month in keys[curr_month_num]) :
                     # print('**No pull in after last month in 3rd iteration***')
-                    break                   
+                    break
             if surplus>0:
                 # print("\n\n--- Month {}, surplus {} ---".format(keys[curr_month_num],surplus))
-                
+
                 if is_final_year == 0:
                     pass  # Fix: ensure this block is not empty
                     # print('ny_year_month---and keys[curr_month_num]',ny_year_month,keys[curr_month_num])
-                
+
                 while surplus > 0:
-                    
+
                     # Target month is keys[i + 1], which is safe due to the check at the start of the loop
                     next_month = keys[i + 1] # Now it's safe to access
-                    
+
                     # CRITICAL FIX 4: Flag to check if any adjustment was made
                     adjustment_made = False
-                    
+
                     try:
                         pass  # Placeholder for logic
                     except:
                         pass  # Placeholder for logic
-                    
+
                     # Get model rows after confirming next_month is safe to access
                     model_rows = production[production["PRODUCT_TRIM"] == car_model].sort_values(by="MODEL_YEAR")
-                    
+
                     for car_model in pullin_desired_order:
                         floor_doh = doh_floor_ceil_df1[doh_floor_ceil_df1["dd_Trim"] == car_model]["amt_Floor_DOS"].values[0]
                         ceil_doh = doh_floor_ceil_df1[doh_floor_ceil_df1["dd_Trim"] == car_model]["amt_Ceiling_DOS"].values[0]
@@ -466,28 +466,28 @@ def ConstrainedPlan(req_prod,capacity,production,inventory,sales,dos,pullin_desi
                                 days_per_month_floor = []
                                 for dayinmon in special_inv_month_key[i + 2:]:
                                     days_per_month_floor.append(days_in_month(dayinmon))
-                                    
+
                                 adjustable_invt_floor = current_invt - calculate_amt_of_invt(floor_doh, sales_forecast_floor_doh, days_per_month_floor)
-                                
+
 #                                current_invt_ceil = inventory.loc[inventory.index[idx], special_inv_month_key[curr_month_num]]
 #                                sales_forecast_ceil_doh = sales.loc[sales.index[idx], special_inv_month_key[curr_month_num + 1:]].values[:]
 #                                sales_forecast_ceil_doh = sales_forecast_ceil_doh.astype(int).tolist()
 #                                days_per_month_ceil = []
 #                                for dayinmon in special_inv_month_key[curr_month_num + 1:]:
 #                                    days_per_month_ceil.append(days_in_month(dayinmon))
-                                    
+
 #                                adjustable_invt_ceil = calculate_amt_of_invt(ceil_doh, sales_forecast_ceil_doh, days_per_month_ceil) - current_invt_ceil
 #                                if adjustable_invt_ceil<0:
 #                                    invt_acceptable = 0
 #                                else:
 #                                    invt_acceptable = min(adjustable_invt_floor,adjustable_invt_ceil)
-                            
+
                             except Exception as e:
                                      # print('exception as :', e)
                                      pass
                             # Determine the pull value and update
                             pull_value = min(sub_val, adjustable_invt_floor)
-                            
+
                             # CRITICAL FIX 4: Check if an actual adjustment is being made
                             if pull_value > 0:
                                 adjustment_made = True
@@ -515,7 +515,7 @@ def ConstrainedPlan(req_prod,capacity,production,inventory,sales,dos,pullin_desi
                                     sales_values = sales.loc[sales.index[idx], special_inv_month_key_ny[curr_month_num+1:]].values[:]
                                 except:
                                     #print('Breaking at Sales Values in except in iteration 3')
-                                    pass                                         
+                                    pass
                                 sales_values = sales_values.astype(int).tolist()
                                 days_per_month = []
                                 for dayinmon in special_inv_month_key_ny[curr_month_num+1:]:
@@ -524,7 +524,7 @@ def ConstrainedPlan(req_prod,capacity,production,inventory,sales,dos,pullin_desi
                                 total_days_of_supply = calculate_days_of_supply(end_of_month_inventory, sales_values,days_per_month)
                                 # CRITICAL FIX 5: Use month column name (string), not integer index
                                 dos.loc[(dos['PRODUCT_TRIM']==car_model) & (dos["MODEL_YEAR"] == model_year), keys[curr_month_num]] = float(total_days_of_supply)
-                                
+
                                 #DOS CHECK 2 for pulled in record
                                 end_of_month_inventory_ith = inventory.loc[inventory.index[idx], keys[i+1]]
                                 sales_values_ith = sales.loc[sales.index[idx], special_inv_month_key_ny[i+2:]].values[:]
@@ -539,10 +539,10 @@ def ConstrainedPlan(req_prod,capacity,production,inventory,sales,dos,pullin_desi
                             # Break inner loops if surplus is exhausted
                             if surplus <= 0:
                                 break
-                        
+
                         if surplus <= 0:
                             break
-                        
+
                     # CRITICAL FIX 6: Exit the while loop if surplus remains but no adjustment was made
                     if surplus > 0 and not adjustment_made:
                         print(f"Warning: Could not fully resolve surplus in {keys[curr_month_num]}. Breaking while loop to prevent hang.")
@@ -558,6 +558,7 @@ from pathlib import Path
 import numpy as np
 import calendar
 import math
+from constraint_identification import calculate_constraint_identification, display_constraint_identification
 
 # -----------------------------
 # Load Input Data
@@ -618,6 +619,8 @@ def get_columns_for_choice(choice):
         return sales.columns.tolist()
     elif choice == "dos":
         return dos.columns.tolist()
+    elif choice == "Constraint Identification":
+        return ['MODEL', 'MONTH_NO', 'YEAR_NO', 'PROJECTED_PRODUCTION_PLAN', 'AVAILABLE_BUILD_SLOT', 'DIFFERENCE_SLOT']
     else:
         return []
 
@@ -724,13 +727,6 @@ st.sidebar.markdown("""
 
 st.sidebar.markdown('<div class="sidebar-title">⚙️ Data Frames Viewer</div>', unsafe_allow_html=True)
 
-st.sidebar-btn button {
-    height: 60px;
-    white-space: normal;   /* allow wrap */
-    line-height: 1.2;      /* tighter lines for two-line labels */
-    align-items: flex-start; /* vertically align text to top for multi-line */
-}
-
 # Dataset buttons (persist selection in session_state)
 with st.sidebar:
     # Wrap all buttons into one vertical container to get uniform gap
@@ -787,6 +783,10 @@ elif dataset_choice == "sales":
     sales = filter_and_edit(sales, "sales")
 elif dataset_choice == "dos":
     dos = filter_and_edit(dos, "dos")
+elif dataset_choice == "Constraint Identification":
+    # Calculate constraint identification
+    constraint_df = calculate_constraint_identification(req_prod, capacity)
+    display_constraint_identification(constraint_df)
 elif dataset_choice == "Unconstrained Inventory Summary":
     st.subheader("📋 Unconstrained Inventory Summary")
     if not unconstrained_inventory_df.empty:
