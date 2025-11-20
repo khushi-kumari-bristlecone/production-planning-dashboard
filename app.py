@@ -665,7 +665,7 @@ st.sidebar.markdown("""
     /* Sidebar buttons */
     .sidebar-btn button {
         width: 100%;
-        margin-bottom: 0.6rem;
+        margin-bottom: 0.18rem;
         background: linear-gradient(90deg, #3a3f4b 0%, #23272f 100%);
         color: #f3f6fa;
         border: 1px solid #444857;
@@ -673,6 +673,9 @@ st.sidebar.markdown("""
         font-size: 1.05rem;
         font-weight: 500;
         transition: background 0.2s, color 0.2s;
+        box-shadow: 0 1px 4px 0 rgba(0,0,0,0.08);
+        padding-top: 0.45rem;
+        padding-bottom: 0.45rem;
     }
     .sidebar-btn button:hover {
         background: #444857;
