@@ -702,8 +702,8 @@ elif dataset_choice == "dos":
 elif dataset_choice == "Unconstrained Inventory Summary":
     st.subheader("📋 Unconstrained Inventory Summary")
     if not unconstrained_inventory_df.empty:
-        st.write(f"Shape: {unconstrained_inventory_df.shape}")
-        st.write(f"Columns: {list(unconstrained_inventory_df.columns)}")
+        #st.write(f"Shape: {unconstrained_inventory_df.shape}")
+        #st.write(f"Columns: {list(unconstrained_inventory_df.columns)}")
         st.data_editor(unconstrained_inventory_df, key="edit_unconstrained_inventory", num_rows="dynamic")
     else:
         st.info("No data available in Unconstrained Inventory Summary.")
@@ -726,4 +726,5 @@ if run_balance_result is not None:
 
     st.subheader("📈 Updated DOS")
     st.data_editor(dos_out, key="edit_dos_out", num_rows="dynamic")
+
 
