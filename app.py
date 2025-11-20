@@ -647,31 +647,58 @@ if run_balance_clicked:
     run_balance_result = (production_out, inventory_out, dos_out)
 
 # Sidebar: Data Frames Viewer header
-st.sidebar.header("⚙️ Data Frames Viewer")
+st.sidebar.markdown("""
+    <style>
+    /* Sidebar background and padding */
+    [data-testid="stSidebar"] {
+        background-color: #23272f;
+        padding: 1.5rem 1rem 1.5rem 1rem;
+    }
+    /* Sidebar header */
+    .sidebar-title {
+        font-size: 1.3rem;
+        font-weight: 700;
+        color: #f3f6fa;
+        margin-bottom: 1.2rem;
+        letter-spacing: 0.5px;
+    }
+    /* Sidebar buttons */
+    .sidebar-btn button {
+        width: 100%;
+        margin-bottom: 0.6rem;
+        background: linear-gradient(90deg, #3a3f4b 0%, #23272f 100%);
+        color: #f3f6fa;
+        border: 1px solid #444857;
+        border-radius: 8px;
+        font-size: 1.05rem;
+        font-weight: 500;
+        transition: background 0.2s, color 0.2s;
+    }
+    .sidebar-btn button:hover {
+        background: #444857;
+        color: #ffe082;
+    }
+    </style>
+    """, unsafe_allow_html=True)
 
-# Replace selectbox with buttons for each dataset and a new 'Constraint Identification' option
-if 'dataset_choice' not in st.session_state:
-    st.session_state['dataset_choice'] = 'req_prod'
+st.sidebar.markdown('<div class="sidebar-title">⚙️ Data Frames Viewer</div>', unsafe_allow_html=True)
 
 # Dataset buttons (persist selection in session_state)
-if st.sidebar.button("req_prod", key="btn_req_prod"):
-    st.session_state['dataset_choice'] = 'req_prod'
-if st.sidebar.button("capacity", key="btn_capacity"):
-    st.session_state['dataset_choice'] = 'capacity'
-if st.sidebar.button("production", key="btn_production"):
-    st.session_state['dataset_choice'] = 'production'
-if st.sidebar.button("inventory", key="btn_inventory"):
-    st.session_state['dataset_choice'] = 'inventory'
-if st.sidebar.button("sales", key="btn_sales"):
-    st.session_state['dataset_choice'] = 'sales'
-if st.sidebar.button("dos", key="btn_dos"):
-    st.session_state['dataset_choice'] = 'dos'
-# New option
-if st.sidebar.button("Constraint Identification", key="btn_constraint"):
-    st.session_state['dataset_choice'] = 'Constraint Identification'
-# Add sidebar button for Unconstrained Inventory Summary
-if st.sidebar.button("Unconstrained Inventory Summary", key="btn_unconstrained_inventory"):
-    st.session_state['dataset_choice'] = 'Unconstrained Inventory Summary'
+with st.sidebar:
+    for name, key in [
+        ("req_prod", "btn_req_prod"),
+        ("capacity", "btn_capacity"),
+        ("production", "btn_production"),
+        ("inventory", "btn_inventory"),
+        ("sales", "btn_sales"),
+        ("dos", "btn_dos"),
+        ("Constraint Identification", "btn_constraint"),
+        ("Unconstrained Inventory Summary", "btn_unconstrained_inventory")
+    ]:
+        st.markdown('<div class="sidebar-btn">', unsafe_allow_html=True)
+        if st.button(name, key=key):
+            st.session_state['dataset_choice'] = name
+        st.markdown('</div>', unsafe_allow_html=True)
 
 # Read the current selection
 dataset_choice = st.session_state.get('dataset_choice', 'req_prod')
@@ -710,8 +737,8 @@ elif dataset_choice == "dos":
 elif dataset_choice == "Unconstrained Inventory Summary":
     st.subheader("📋 Unconstrained Inventory Summary")
     if not unconstrained_inventory_df.empty:
-        st.write(f"Shape: {unconstrained_inventory_df.shape}")
-        st.write(f"Columns: {list(unconstrained_inventory_df.columns)}")
+        #st.write(f"Shape: {unconstrained_inventory_df.shape}")
+        #st.write(f"Columns: {list(unconstrained_inventory_df.columns)}")
         st.data_editor(unconstrained_inventory_df, key="edit_unconstrained_inventory", num_rows="dynamic")
     else:
         st.info("No data available in Unconstrained Inventory Summary.")
