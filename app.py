@@ -599,8 +599,38 @@ doh_floor_ceil_df1 = pd.DataFrame({
 # -----------------------------
 st.set_page_config(page_title="Production Planning Dashboard", layout="wide")
 
-# Move Filter value above the heading as requested
-filter_value = st.text_input("Filter value (exact match):", "", key="global_filter_value")
+# Ensure dataset_choice and get_columns_for_choice are defined before using them at the top
+# Read the current selection
+if 'dataset_choice' not in st.session_state:
+    st.session_state['dataset_choice'] = 'req_prod'
+dataset_choice = st.session_state.get('dataset_choice', 'req_prod')
+
+def get_columns_for_choice(choice):
+    if choice == "req_prod":
+        return req_prod.columns.tolist()
+    elif choice == "capacity":
+        return capacity.columns.tolist()
+    elif choice == "production":
+        return production.columns.tolist()
+    elif choice == "inventory":
+        return inventory.columns.tolist()
+    elif choice == "sales":
+        return sales.columns.tolist()
+    elif choice == "dos":
+        return dos.columns.tolist()
+    else:
+        return []
+
+# Move Filter value and Filter column to the top of the page, side by side
+col1, col2 = st.columns([1, 2])
+with col1:
+    filter_column = st.selectbox(
+        "Filter column:",
+        options=get_columns_for_choice(dataset_choice),
+        key="top_filter_column"
+    )
+with col2:
+    filter_value = st.text_input("Filter value (exact match):", "", key="top_filter_value")
 
 st.title("📊 Production Planning Dashboard")
 
@@ -647,28 +677,6 @@ if st.sidebar.button("Unconstrained Inventory Summary", key="btn_unconstrained_i
 dataset_choice = st.session_state.get('dataset_choice', 'req_prod')
 
 # Add filter column control in sidebar (keeps column selector in sidebar)
-def get_columns_for_choice(choice):
-    if choice == "req_prod":
-        return req_prod.columns.tolist()
-    elif choice == "capacity":
-        return capacity.columns.tolist()
-    elif choice == "production":
-        return production.columns.tolist()
-    elif choice == "inventory":
-        return inventory.columns.tolist()
-    elif choice == "sales":
-        return sales.columns.tolist()
-    elif choice == "dos":
-        return dos.columns.tolist()
-    else:
-        return []
-
-filter_column = st.sidebar.selectbox(
-    "Filter column:",
-    options=get_columns_for_choice(dataset_choice)
-)
-filter_value = st.sidebar.text_input("Filter value (exact match):", "")
-
 # Helper to filter and edit any DataFrame
 from streamlit import column_config
 
@@ -702,8 +710,8 @@ elif dataset_choice == "dos":
 elif dataset_choice == "Unconstrained Inventory Summary":
     st.subheader("📋 Unconstrained Inventory Summary")
     if not unconstrained_inventory_df.empty:
-        #st.write(f"Shape: {unconstrained_inventory_df.shape}")
-        #st.write(f"Columns: {list(unconstrained_inventory_df.columns)}")
+        st.write(f"Shape: {unconstrained_inventory_df.shape}")
+        st.write(f"Columns: {list(unconstrained_inventory_df.columns)}")
         st.data_editor(unconstrained_inventory_df, key="edit_unconstrained_inventory", num_rows="dynamic")
     else:
         st.info("No data available in Unconstrained Inventory Summary.")
@@ -726,5 +734,4 @@ if run_balance_result is not None:
 
     st.subheader("📈 Updated DOS")
     st.data_editor(dos_out, key="edit_dos_out", num_rows="dynamic")
-
 
